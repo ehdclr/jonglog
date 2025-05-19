@@ -1,50 +1,45 @@
+// src/app/admin/login/page.tsx
 "use client"
 
-import type React from "react"
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { useAuth } from "@/lib/auth-context"
-import { Loader2 } from "lucide-react"
+import { Loader2 } from 'lucide-react'
+import { useAuthStore } from "@/store"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
-  const [error, setError] = useState<string | null>(null)
-  const { login, loading, isAdmin } = useAuth()
   const router = useRouter()
-
+  
+  const { login, loading, error, isAdmin, clearError } = useAuthStore()
+  
+  // 이미 로그인한 경우 대시보드로 리디렉션
   useEffect(() => {
     if (isAdmin) {
       router.push("/admin")
     }
   }, [isAdmin, router])
 
+    
+  // 입력 필드 변경 시 오류 메시지 초기화
+  useEffect(() => {
+    if (error) {
+      clearError()
+    }
+  }, [email, password, error, clearError])
+
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    setError(null)
-
-    try {
-      const { success, message } = await login(email, password)
-
-      if (!success) {
-        setError(message)
-      }
-    } catch (error: unknown) {
-      setError(error instanceof Error ? error.message : "로그인에 실패했습니다.")
+    
+    const { success } = await login(email, password)
+    
+    if (success) {
+      router.push("/admin")
     }
-  }
-
-  // 로딩 중일 때 로딩 UI 표시
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-background">
-        <Loader2 className="h-8 w-8 animate-spin" />
-      </div>
-    )
   }
 
   return (

@@ -1,24 +1,11 @@
 "use client"
 
-import { useAuth } from "@/lib/auth-context"
+import { useAuthStore } from "@/store"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { useQuery, gql } from "@apollo/client"
-import { Loader2 } from "lucide-react"
 
-// GraphQL 쿼리 정의
-const GET_DASHBOARD_STATS = gql`
-  query GetDashboardStats {
-    stats {
-      totalPosts
-      totalFiles
-      totalAdmins
-    }
-  }
-`
 
 export default function AdminDashboardPage() {
-  const { user } = useAuth()
-  const { data, loading, error } = useQuery(GET_DASHBOARD_STATS)
+  const { user } = useAuthStore()
 
   return (
     <div className="space-y-6">
@@ -32,11 +19,11 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{user?.name}</p>
-            <p className="text-sm text-muted-foreground">{user?.role === "OWNER" ? "소유자" : "관리자"}</p>
+            <p className="text-sm text-muted-foreground">{user?.role === "owner" ? "소유자" : "관리자"}</p>
           </CardContent>
         </Card>
 
-        {loading ? (
+        {/* {loading ? (
           <Card>
             <CardHeader className="pb-2">
               <CardTitle>통계 로딩 중</CardTitle>
@@ -76,7 +63,7 @@ export default function AdminDashboardPage() {
               </CardContent>
             </Card>
 
-            {user?.role === "OWNER" && (
+            {user?.role === "owner" && (
               <Card>
                 <CardHeader className="pb-2">
                   <CardTitle>관리자</CardTitle>
@@ -86,9 +73,9 @@ export default function AdminDashboardPage() {
                   <p className="text-2xl font-bold">{data?.stats?.totalAdmins || 0}</p>
                 </CardContent>
               </Card>
-            )}
-          </>
-        )}
+            )} */}
+          {/* </> */}
+        {/* )} */}
       </div>
     </div>
   )

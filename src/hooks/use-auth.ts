@@ -17,7 +17,8 @@ export function useAuth() {
   const [logout] = useMutation(LOGOUT_MUTATION, {
     onCompleted: () => {
       // 토큰 제거
-      localStorage.removeItem("token")
+      localStorage.removeItem("accessToken")
+      localStorage.removeItem("refreshToken")
 
       // 쿼리 캐시 초기화
       refetch()
@@ -27,20 +28,18 @@ export function useAuth() {
     },
   })
 
-  const user = data?.me
+  const user = data?.getCurrentUser
   const isAdmin = user?.role === "admin" || user?.role === "owner"
 
   // 인증 상태에 따른 리디렉션
   useEffect(() => {
     if (!loading) {
-      // 관리자 페이지 접근 시 로그인 확인
       if (pathname?.startsWith("/admin") && pathname !== "/admin/login") {
         if (!isAdmin) {
           router.push("/admin/login")
         }
       }
 
-      // 이미 로그인한 상태에서 로그인 페이지 접근 시 대시보드로 리디렉션
       if (pathname === "/admin/login" && isAdmin) {
         router.push("/admin")
       }

@@ -1,24 +1,44 @@
+// src/components/sidebar.tsx
 "use client";
+
+import type React from "react";
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
-import { Calendar, FileText, FolderOpen, Home, Plus, Settings, BarChart } from 'lucide-react';
+import {
+  Calendar,
+  FileText,
+  FolderOpen,
+  Home,
+  Plus,
+  Settings,
+  BarChart,
+  Users,
+} from "lucide-react";
+import { useAuthStore, useUIStore } from "@/store";
 
-type SidebarProps = React.HTMLAttributes<HTMLDivElement>;
 
-export function Sidebar({ className }: SidebarProps) {
+export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
   const pathname = usePathname();
+  const { user, isAdmin } = useAuthStore();
+  const { sidebarOpen } = useUIStore();
+
+  if (!sidebarOpen) return null;
 
   return (
-    <div className={cn("pb-12 border-r bg-background", className)}>
+    <div
+      className={cn(
+        "pb-12 border-r bg-background w-64 flex-shrink-0",
+        className
+      )}
+    >
       <div className="space-y-4 py-4">
         <div className="px-4 py-2">
           <Button variant="outline" className="w-full justify-start gap-2">
-            <Plus className="h-4 w-4" />
-            새 게시물
+            <Plus className="h-4 w-4" />새 게시물
           </Button>
         </div>
         <div className="px-3">
@@ -29,8 +49,7 @@ export function Sidebar({ className }: SidebarProps) {
               asChild
             >
               <Link href="/">
-                <Home className="h-4 w-4" />
-                홈
+                <Home className="h-4 w-4" />홈
               </Link>
             </Button>
             <Button
@@ -75,6 +94,50 @@ export function Sidebar({ className }: SidebarProps) {
             </Button>
           </div>
         </div>
+
+        {/* 관리자 전용 메뉴 */}
+        {isAdmin && (
+          <div className="px-3 py-2">
+            <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
+              관리자 메뉴
+            </h2>
+            <div className="space-y-1">
+              <Button
+                variant={pathname === "/admin/posts" ? "secondary" : "ghost"}
+                className="w-full justify-start gap-2"
+                asChild
+              >
+                <Link href="/admin/posts">
+                  <FileText className="h-4 w-4" />
+                  게시물 관리
+                </Link>
+              </Button>
+              <Button
+                variant={pathname === "/admin/files" ? "secondary" : "ghost"}
+                className="w-full justify-start gap-2"
+                asChild
+              >
+                <Link href="/admin/files">
+                  <FolderOpen className="h-4 w-4" />
+                  파일 관리
+                </Link>
+              </Button>
+              {user?.role === "owner" && (
+                <Button
+                  variant={pathname === "/admin/users" ? "secondary" : "ghost"}
+                  className="w-full justify-start gap-2"
+                  asChild
+                >
+                  <Link href="/admin/users">
+                    <Users className="h-4 w-4" />
+                    관리자 관리
+                  </Link>
+                </Button>
+              )}
+            </div>
+          </div>
+        )}
+
         <div className="px-3 py-2">
           <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
             카테고리
@@ -94,19 +157,14 @@ export function Sidebar({ className }: SidebarProps) {
                 variant="ghost"
                 className="w-full justify-start font-normal text-muted-foreground"
               >
-                <Plus className="mr-2 h-4 w-4" />
-                새 카테고리
+                <Plus className="mr-2 h-4 w-4" />새 카테고리
               </Button>
             </div>
           </ScrollArea>
         </div>
       </div>
       <div className="mt-auto px-3 py-2">
-        <Button
-          variant="ghost"
-          className="w-full justify-start gap-2"
-          asChild
-        >
+        <Button variant="ghost" className="w-full justify-start gap-2" asChild>
           <Link href="/settings">
             <Settings className="h-4 w-4" />
             설정

@@ -2,17 +2,15 @@
 
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/lib/auth-context"
 import { Loader2 } from 'lucide-react'
-import { Header } from "@/components/header"
-import { Sidebar } from "@/components/sidebar"
+import { useAuthStore } from "@/store"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { loading, isAdmin } = useAuth()
+  const { loading, isAdmin } = useAuthStore()
   const router = useRouter()
 
   useEffect(() => {
@@ -20,8 +18,7 @@ export default function AdminLayout({
       router.push("/admin/login")
     }
   }, [loading, isAdmin, router])
-
-  // 로딩 중인 경우 로딩 표시
+  
   if (loading) {
     return (
       <div className="flex justify-center items-center min-h-screen">
