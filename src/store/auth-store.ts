@@ -66,7 +66,12 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ loading: true })
         try {
-          await api.post('/api/auth/logout')
+          await api.post('/api/auth/logout', {
+            headers: {
+              'Content-Type': 'application/json',
+              'Authorization': `Bearer ${get().accessToken}`
+            }
+          })
         } catch (error) {
           console.error("로그아웃 오류:", error)
         } finally {

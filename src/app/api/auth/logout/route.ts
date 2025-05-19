@@ -8,18 +8,23 @@ export async function POST(request: NextRequest) {
   // 쿠키에서 refresh token 가져오기
   const cookieStore = cookies()
   const refreshToken = cookieStore.get('refresh_token')?.value
+  const authorization = request.headers.get('authorization')
   
   try {
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
+        ...(authorization ? { 'Authorization': authorization } : {}),
         ...(refreshToken ? { 'Cookie': `refresh_token=${refreshToken}` } : {})
       },
       body: JSON.stringify({
         query: `
           mutation Logout {
-            logout
+            logout {
+              success
+              message
+            }
           }
         `
       })
@@ -36,7 +41,7 @@ export async function POST(request: NextRequest) {
     
     // 응답에서 쿠키 제거 지시가 있으면 클라이언트 쿠키도 제거
     const nextResponse = NextResponse.json({ success: true })
-    nextResponse.cookies.delete('refresh_token')
+    nextResponse.cookies.delete('refreshToken')
     
     return nextResponse
   } catch (error: any) {
