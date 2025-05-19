@@ -11,6 +11,26 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarkdownEditor } from "@/components/markdown-editor"
 
+// 파일 업로드 함수
+const uploadFile = async (file: File) => {
+  const formData = new FormData()
+  formData.append("file", file)
+
+  const response = await fetch("/api/upload", {
+    method: "POST",
+    body: formData,
+    // Content-Type 헤더를 제거하여 브라우저가 자동으로 설정하도록 함
+    // multipart/form-data 경계(boundary)를 자동으로 설정
+  })
+
+  if (!response.ok) {
+    const error = await response.json()
+    throw new Error(error.message || "파일 업로드에 실패했습니다.")
+  }
+
+  return response.json()
+}
+
 export default function NewPostPage() {
   const [isPublic, setIsPublic] = useState(true)
   const [markdownContent, setMarkdownContent] = useState("")
@@ -21,13 +41,13 @@ export default function NewPostPage() {
   const [isDragging, setIsDragging] = useState(false)
 
   // 파일 업로드 처리
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileChange = async (e) => {
     if (e.target.files) {
-      processFiles(Array.from(e.target.files))
+      await processFiles(Array.from(e.target.files))
     }
   }
 
-  const handleDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDragOver = (e) => {
     e.preventDefault()
     setIsDragging(true)
   }
@@ -36,21 +56,21 @@ export default function NewPostPage() {
     setIsDragging(false)
   }
 
-  const handleDrop = (e: React.DragEvent<HTMLDivElement>) => {
+  const handleDrop = async (e) => {
     e.preventDefault()
     setIsDragging(false)
 
     if (e.dataTransfer.files) {
-      processFiles(Array.from(e.dataTransfer.files))
+      await processFiles(Array.from(e.dataTransfer.files))
     }
   }
 
   // 파일 처리 및 분류
-  const processFiles = (files: File[]) => {
-    const newImages: any[] = []
-    const newAttachments: any[] = []
+  const processFiles = async (files) => {
+    const newImages = []
+    const newAttachments = []
 
-    files.forEach((file) => {
+    for (const file of files) {
       const fileObj = {
         id: Math.random().toString(36).substring(7),
         name: file.name,
@@ -65,35 +85,54 @@ export default function NewPostPage() {
       } else {
         newAttachments.push(fileObj)
       }
-    })
+    }
 
     setCarouselImages([...carouselImages, ...newImages])
     setAttachments([...attachments, ...newAttachments])
+
+    // 업로드된 파일들을 서버에 업로드
+    for (const image of newImages) {
+      try {
+        const uploadedImage = await uploadFile(image.file)
+        console.log("Uploaded Image:", uploadedImage)
+      } catch (error) {
+        console.error("Error uploading image:", error)
+      }
+    }
+
+    for (const attachment of newAttachments) {
+      try {
+        const uploadedAttachment = await uploadFile(attachment.file)
+        console.log("Uploaded Attachment:", uploadedAttachment)
+      } catch (error) {
+        console.error("Error uploading attachment:", error)
+      }
+    }
   }
 
-  const removeCarouselImage = (id: string) => {
+  const removeCarouselImage = (id) => {
     setCarouselImages(carouselImages.filter((image) => image.id !== id))
   }
 
-  const removeAttachment = (id: string) => {
+  const removeAttachment = (id) => {
     setAttachments(attachments.filter((attachment) => attachment.id !== id))
   }
 
   // 마크다운 에디터에 이미지 삽입
-  const insertImageToEditor = (file: any) => {
+  const insertImageToEditor = (file) => {
     const imageUrl = file.preview || "/placeholder.svg"
     const imageMarkdown = `![${file.name}](${imageUrl})\n`
     setMarkdownContent(markdownContent + imageMarkdown)
   }
 
   // 이미지 업로드 핸들러 (실제로는 Supabase Storage에 업로드)
-  const handleImageUpload = async (file: File) => {
+  const handleImageUpload = async (file) => {
     // 실제 구현에서는 Supabase Storage에 업로드하고 URL 반환
     return URL.createObjectURL(file)
   }
 
   // 파일 아이콘 선택
-  const getFileIcon = (type: string) => {
+  const getFileIcon = (type) => {
     if (type.includes("pdf")) return <FilePdf className="h-8 w-8" />
     if (type.includes("text")) return <FileText className="h-8 w-8" />
     return <FileIcon className="h-8 w-8" />
@@ -174,7 +213,7 @@ export default function NewPostPage() {
                   이미지는 캐러셀에 표시되고, 다른 파일은 첨부 파일로 표시됩니다
                 </p>
                 <Input type="file" className="hidden" id="file-upload" multiple onChange={handleFileChange} />
-                <Button variant="outline" size="sm" onClick={() => document.getElementById("file-upload")?.click()}>
+                <Button variant="outline" size="sm" onClick={() => document.getElementById("file-upload").click()}>
                   파일 선택
                 </Button>
               </div>
@@ -185,7 +224,7 @@ export default function NewPostPage() {
             <div className="grid gap-2">
               <Label>캐러셀 이미지 ({carouselImages.length}개)</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {carouselImages.map((image: any) => (
+                {carouselImages.map((image) => (
                   <Card key={image.id} className="overflow-hidden">
                     <CardContent className="p-2">
                       <div className="relative">
@@ -225,7 +264,7 @@ export default function NewPostPage() {
             <div className="grid gap-2">
               <Label>첨부 파일 ({attachments.length}개)</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {attachments.map((file: any) => (
+                {attachments.map((file) => (
                   <Card key={file.id} className="overflow-hidden">
                     <CardContent className="p-2">
                       <div className="relative">
