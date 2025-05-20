@@ -17,6 +17,7 @@ import {
   Settings,
   BarChart,
   Users,
+  UserPlus,
 } from "lucide-react";
 import { useAuthStore, useUIStore } from "@/store";
 
@@ -82,16 +83,6 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
                 달력
               </Link>
             </Button>
-            <Button
-              variant={pathname === "/activity" ? "secondary" : "ghost"}
-              className="w-full justify-start gap-2"
-              asChild
-            >
-              <Link href="/activity">
-                <BarChart className="h-4 w-4" />
-                활동
-              </Link>
-            </Button>
           </div>
         </div>
 
@@ -130,7 +121,19 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
                 >
                   <Link href="/admin/users">
                     <Users className="h-4 w-4" />
-                    관리자 관리
+                    사용자 관리
+                  </Link>
+                </Button>
+              )}
+              {user?.role === "owner" && (
+                <Button
+                  variant={pathname === "/admin/join-request" ? "secondary" : "ghost"}
+                  className="w-full justify-start gap-2"
+                  asChild
+                >
+                  <Link href="/admin/join-request">
+                    <UserPlus className="h-4 w-4" />
+                    가입 요청 관리
                   </Link>
                 </Button>
               )}
@@ -164,12 +167,20 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
         </div>
       </div>
       <div className="mt-auto px-3 py-2">
-        <Button variant="ghost" className="w-full justify-start gap-2" asChild>
-          <Link href="/settings">
-            <Settings className="h-4 w-4" />
-            설정
-          </Link>
-        </Button>
+        {user?.role === "owner" && (
+          <Button variant="ghost" className="w-full justify-start gap-2" asChild>
+            <Link href="/settings">
+              <Settings className="h-4 w-4" />
+              설정
+            </Link>
+          </Button>
+        )}
+        <p className="text-xs text-muted-foreground text-center">
+          @Dev. Jong
+        </p>
+        <p className="text-xs text-muted-foreground text-center">
+          <Link href="https://github.com/ehdclr">GitHub</Link>
+        </p>
       </div>
     </div>
   );

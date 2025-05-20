@@ -12,7 +12,7 @@ import {
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu"
-import { Search, Menu, User, Settings, LogOut } from 'lucide-react'
+import { Search, Menu, User, Settings, LogOut, UserPlus } from 'lucide-react'
 import Link from "next/link"
 import { useAuthStore, useUIStore } from "@/store"
 
@@ -31,6 +31,14 @@ export function Header() {
           <Search className="h-4 w-4" />
           <span className="hidden sm:inline-block">검색</span>
         </Button>
+        {user?.role !== "owner" && user?.role !== "admin" && (
+          <Link href="/join/join-request" className="ml-auto h-8 gap-1">
+            <Button variant="outline" size="sm" className="ml-auto h-8 gap-1">
+              <UserPlus className="h-4 w-4" />
+              <span className="hidden sm:inline-block">가입 요청</span>
+            </Button>
+          </Link>
+        )}
       </div>
       <div className="flex items-center gap-2">
         <ModeToggle />
@@ -46,7 +54,7 @@ export function Header() {
             <DropdownMenuContent align="end">
               <DropdownMenuLabel>{user.name}</DropdownMenuLabel>
               <DropdownMenuLabel className="text-xs text-muted-foreground">
-                {user.role === "owner" ? "소유자" : "관리자"}
+                {user.role === "owner" ? "블로그 주인" : "사용자"}
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
               <DropdownMenuItem asChild>

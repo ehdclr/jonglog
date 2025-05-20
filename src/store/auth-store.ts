@@ -13,7 +13,6 @@ interface AuthState {
   
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>
   logout: () => Promise<void>
-  refreshToken: () => Promise<boolean>
   setUser: (user: User | null) => void
   setAccessToken: (token: string | null) => void
   clearError: () => void
@@ -84,26 +83,6 @@ export const useAuthStore = create<AuthState>()(
         }
       },
       
-      refreshToken: async () => {
-        try {
-          const response = await api.post('/api/auth/refresh')
-          const { accessToken } = response.data
-          
-          if (accessToken) {
-            set({ accessToken })
-            return true
-          }
-          return false
-        } catch (error) {
-          console.error("토큰 갱신 오류:", error)
-          set({ 
-            user: null, 
-            accessToken: null, 
-            isAdmin: false 
-          })
-          return false
-        }
-      }
     }),
     {
       name: 'auth-storage',

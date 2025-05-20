@@ -19,10 +19,10 @@ export default function AdminLoginPage() {
   
   // 이미 로그인한 경우 대시보드로 리디렉션
   useEffect(() => {
-    if (isAdmin) {
-      router.push("/admin")
+    if (!loading && isAdmin) {
+      router.push("/admin");
     }
-  }, [isAdmin, router])
+  }, [loading, isAdmin, router]);
 
     
   // 입력 필드 변경 시 오류 메시지 초기화

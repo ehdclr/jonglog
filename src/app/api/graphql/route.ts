@@ -28,8 +28,7 @@ export async function POST(request: NextRequest) {
     });
 
     const data = await response.json();
-    console.log('asdasd',data.data.getCurrentUser.user);
-    
+  
 
     // GraphQL 서버에서 설정한 쿠키가 있으면 클라이언트에 전달
     const setCookieHeader = response.headers.get("set-cookie");

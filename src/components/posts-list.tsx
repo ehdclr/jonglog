@@ -12,6 +12,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useAuthStore } from "@/store"
 
 // 가상의 게시물 데이터
 const dummyPosts = [
@@ -50,6 +51,7 @@ const dummyPosts = [
 ]
 
 export function PostsList() {
+  const { user } = useAuthStore()
   const [posts, setPosts] = useState(dummyPosts)
   const [filter, setFilter] = useState("all") // all, public, private
 
@@ -74,9 +76,11 @@ export function PostsList() {
           <Button variant={filter === "public" ? "default" : "outline"} size="sm" onClick={() => setFilter("public")}>
             공개
           </Button>
-          <Button variant={filter === "private" ? "default" : "outline"} size="sm" onClick={() => setFilter("private")}>
-            비공개
-          </Button>
+          {(user?.role === "owner" || user?.role === "admin") && (
+            <Button variant={filter === "private" ? "default" : "outline"} size="sm" onClick={() => setFilter("private")}>
+              비공개
+            </Button>
+          )}
         </div>
       </div>
 

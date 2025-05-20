@@ -23,6 +23,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Eye, EyeOff, FileText, ImageIcon, MoreHorizontal, File, Download, Trash, Upload } from "lucide-react"
+import { useAuthStore } from "@/store"
 
 // 가상의 파일 데이터
 const dummyFiles = [
@@ -61,6 +62,7 @@ const dummyFiles = [
 ]
 
 export function FileExplorer() {
+  const { user } = useAuthStore()
   const [files, setFiles] = useState(dummyFiles)
   const [filter, setFilter] = useState("all") // all, public, private
 
@@ -96,9 +98,11 @@ export function FileExplorer() {
           <Button variant={filter === "public" ? "default" : "outline"} size="sm" onClick={() => setFilter("public")}>
             공개
           </Button>
-          <Button variant={filter === "private" ? "default" : "outline"} size="sm" onClick={() => setFilter("private")}>
-            비공개
-          </Button>
+          {(user?.role === "owner" || user?.role === "admin") && (
+            <Button variant={filter === "private" ? "default" : "outline"} size="sm" onClick={() => setFilter("private")}>
+              비공개
+            </Button>
+          )}
         </div>
         <Dialog>
           <DialogTrigger asChild>

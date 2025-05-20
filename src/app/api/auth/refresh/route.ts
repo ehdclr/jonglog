@@ -7,7 +7,8 @@ const GRAPHQL_ENDPOINT = process.env.NEXT_PUBLIC_GRAPHQL_URL || 'http://localhos
 export async function POST(request: NextRequest) {
   // 쿠키에서 refresh token 가져오기
   const cookieStore = cookies()
-  const refreshToken = cookieStore.get('refresh_token')?.value
+  const refreshToken = cookieStore.get('refreshToken')?.value
+
   
   if (!refreshToken) {
     return NextResponse.json(
@@ -21,22 +22,24 @@ export async function POST(request: NextRequest) {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
-        'Cookie': `refresh_token=${refreshToken}`
+        'Cookie': `refreshToken=${refreshToken}`
       },
       body: JSON.stringify({
         query: `
-          mutation RefreshToken {
+          mutation refreshToken {
             refreshToken {
               accessToken
               success
             }
           }
-        `
+        `,
+        variables: {
+          refreshToken: refreshToken
+        }
       })
     })
     
     const { data, errors } = await response.json()
-    
     if (errors) {
       return NextResponse.json(
         { success: false, message: errors[0].message },

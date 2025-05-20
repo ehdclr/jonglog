@@ -1,11 +1,25 @@
-"use client"
+"use client";
 
-import { useAuthStore } from "@/store"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-
+import { useAuthStore } from "@/store";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
 export default function AdminDashboardPage() {
-  const { user } = useAuthStore()
+  const { user } = useAuthStore();
+  const router = useRouter();
+
+  useEffect(() => {
+    if (user?.role !== "owner" && user?.role !== "admin") {
+      router.push("/admin/login");
+    }
+  }, [user, router]);
 
   return (
     <div className="space-y-6">
@@ -19,7 +33,9 @@ export default function AdminDashboardPage() {
           </CardHeader>
           <CardContent>
             <p className="text-2xl font-bold">{user?.name}</p>
-            <p className="text-sm text-muted-foreground">{user?.role === "owner" ? "소유자" : "관리자"}</p>
+            <p className="text-sm text-muted-foreground">
+              {user?.role === "owner" ? "소유자" : "관리자"}
+            </p>
           </CardContent>
         </Card>
 
@@ -74,9 +90,9 @@ export default function AdminDashboardPage() {
                 </CardContent>
               </Card>
             )} */}
-          {/* </> */}
+        {/* </> */}
         {/* )} */}
       </div>
     </div>
-  )
+  );
 }
