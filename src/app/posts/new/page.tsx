@@ -78,17 +78,49 @@ const uploadFileToServer = async (file: File) => {
   }
 }
 
+// 파일 타입 정의
+type FileObject = {
+  id: string
+  name: string
+  size: string
+  type: string
+  url: string
+  preview: string | null
+  isImage: boolean
+}
+
 export default function CreatePostPage() {
   const [isPublic, setIsPublic] = useState(true)
   const [markdownContent, setMarkdownContent] = useState("")
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
-  const [carouselImages, setCarouselImages] = useState<Record<string, any>>({})
+  const [carouselImages, setCarouselImages] = useState<Record<string, FileObject>>({})
   const [imageOrder, setImageOrder] = useState<string[]>([])
   const [currentImageId, setCurrentImageId] = useState<string | null>(null)
-  const [attachments, setAttachments] = useState<any[]>([])
+  const [attachments, setAttachments] = useState<FileObject[]>([])
   const [isDragging, setIsDragging] = useState(false)
   const [isUploading, setIsUploading] = useState(false)
+
+  // 공통 파일 업로드 로직
+  const uploadFile = async (file: File): Promise<FileObject> => {
+    let processedFile = file
+    if (file.type.startsWith("image/") && file.size > 1024 * 1024) {
+      processedFile = await optimizeImage(file)
+    }
+
+    const uploadResult = await uploadFileToServer(processedFile)
+    const uniqueId = `${Date.now()}-${Math.random().toString(36).substring(7)}`
+
+    return {
+      id: uniqueId,
+      name: file.name,
+      size: (file.size / 1024).toFixed(2) + " KB",
+      type: file.type,
+      url: uploadResult.url,
+      preview: file.type.startsWith("image/") ? uploadResult.url : null,
+      isImage: file.type.startsWith("image/"),
+    }
+  }
 
   // 파일 업로드 처리
   const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -115,35 +147,16 @@ export default function CreatePostPage() {
     }
   }
 
-  // 파일 처리 및 분류
+  // 여러 파일 처리
   const processFiles = async (files: File[]) => {
     setIsUploading(true)
-    const newImages = []
-    const newAttachments = []
+    const newImages: FileObject[] = []
+    const newAttachments: FileObject[] = []
 
     for (const file of files) {
       try {
-        let processedFile = file
-
-        // 이미지인 경우 최적화
-        if (file.type.startsWith("image/") && file.size > 1024 * 1024) {
-          processedFile = await optimizeImage(file)
-        }
-
-        // 서버에 파일 업로드
-        const uploadResult = await uploadFileToServer(processedFile)
-
-        const fileObj = {
-          id: uploadResult.fileName || Math.random().toString(36).substring(7),
-          name: file.name,
-          size: (file.size / 1024).toFixed(2) + " KB",
-          type: file.type,
-          url: uploadResult.url,
-          preview: file.type.startsWith("image/") ? uploadResult.url : null,
-          isImage: file.type.startsWith("image/"),
-        }
-
-        if (file.type.startsWith("image/")) {
+        const fileObj = await uploadFile(file)
+        if (fileObj.isImage) {
           newImages.push(fileObj)
         } else {
           newAttachments.push(fileObj)
@@ -153,27 +166,40 @@ export default function CreatePostPage() {
       }
     }
 
+    // 이미지 상태 업데이트
     for (const image of newImages) {
-      const imageId = image.id
       setCarouselImages((prev) => ({
         ...prev,
-        [imageId]: image,
+        [image.id]: image,
       }))
-      setImageOrder((prev) => [...prev, imageId])
+      setImageOrder((prev) => [...prev, image.id])
 
-      // 첫 번째 이미지인 경우 현재 이미지로 설정
       if (!currentImageId) {
-        setCurrentImageId(imageId)
+        setCurrentImageId(image.id)
       }
     }
-    setAttachments([...attachments, ...newAttachments])
+
+    setAttachments((prev) => [...prev, ...newAttachments])
     setIsUploading(false)
+  }
+
+  // 마크다운 에디터용 이미지 업로드
+  const handleImageUpload = async (file: File) => {
+    try {
+      const fileObj = await uploadFile(file)
+      setCarouselImages((prev) => ({ ...prev, [fileObj.id]: fileObj }))
+      setImageOrder((prev) => [...prev, fileObj.id])
+      return fileObj.url
+    } catch (error) {
+      console.error("이미지 업로드 중 오류 발생:", error)
+      throw error
+    }
   }
 
   const removeCarouselImage = async (id: string) => {
     try {
       const imageToRemove = carouselImages[id]
-      if (imageToRemove && imageToRemove.url) {
+      if (imageToRemove?.url) {
         await fetch("/api/delete-file", {
           method: "DELETE",
           headers: {
@@ -186,19 +212,14 @@ export default function CreatePostPage() {
       console.error("파일 삭제 오류:", error)
     }
 
-    // 이미지 객체에서 해당 ID 제거
     const newImages = { ...carouselImages }
     delete newImages[id]
     setCarouselImages(newImages)
-
-    // 이미지 순서 배열에서도 제거
     setImageOrder((prev) => prev.filter((imageId) => imageId !== id))
 
-    // 현재 이미지가 삭제된 경우 다른 이미지로 변경
     if (currentImageId === id) {
       const newOrder = imageOrder.filter((imageId) => imageId !== id)
       if (newOrder.length > 0) {
-        // 삭제된 이미지 다음 이미지를 선택하거나, 마지막 이미지를 선택
         const currentIndex = imageOrder.indexOf(id)
         const nextIndex = Math.min(currentIndex, newOrder.length - 1)
         setCurrentImageId(newOrder[nextIndex])
@@ -209,10 +230,9 @@ export default function CreatePostPage() {
   }
 
   const removeAttachment = async (id: string) => {
-    // 서버에서 파일 삭제 API 호출 (구현 필요)
     try {
       const attachmentToRemove = attachments.find((att) => att.id === id)
-      if (attachmentToRemove && attachmentToRemove.url) {
+      if (attachmentToRemove?.url) {
         await fetch("/api/delete-file", {
           method: "DELETE",
           headers: {
@@ -225,56 +245,21 @@ export default function CreatePostPage() {
       console.error("파일 삭제 오류:", error)
     }
 
-    setAttachments(attachments.filter((attachment) => attachment.id !== id))
+    setAttachments((prev) => prev.filter((attachment) => attachment.id !== id))
   }
 
-  // 마크다운 에디터에 이미지 삽입
-  const insertImageToEditor = (file: any) => {
+  const insertImageToEditor = (file: FileObject) => {
     const imageUrl = file.url || file.preview || "/placeholder.svg"
     const imageMarkdown = `![${file.name}](${imageUrl})\n`
-    setMarkdownContent(markdownContent + imageMarkdown)
+    setMarkdownContent((prev) => prev + imageMarkdown)
   }
 
-  // 이미지 업로드 핸들러 (서버에 업로드)
-  const handleImageUpload = async (file: File) => {
-    try {
-      // 1MB 이상인 경우 최적화
-      let processedFile = file
-      if (file.size > 1024 * 1024) {
-        processedFile = await optimizeImage(file)
-      }
-
-      // 서버에 업로드
-      const uploadResult = await uploadFileToServer(processedFile)
-
-      // 이미지를 캐러셀에도 추가
-      const fileObj = {
-        id: uploadResult.fileName || Math.random().toString(36).substring(7),
-        name: file.name,
-        size: (file.size / 1024).toFixed(2) + " KB",
-        type: file.type,
-        url: uploadResult.url,
-        preview: uploadResult.url,
-        isImage: true,
-      }
-
-      setCarouselImages((prev) => ({ ...prev, [fileObj.id]: fileObj }))
-      setImageOrder((prev) => [...prev, fileObj.id])
-      return uploadResult.url
-    } catch (error) {
-      console.error("이미지 업로드 중 오류 발생:", error)
-      throw error
-    }
-  }
-
-  // 파일 아이콘 선택
   const getFileIcon = (type: string) => {
     if (type.includes("pdf")) return <FilePdf className="h-8 w-8" />
     if (type.includes("text")) return <FileText className="h-8 w-8" />
     return <FileIcon className="h-8 w-8" />
   }
 
-  // 게시물 저장
   const savePost = async (isDraft = false) => {
     if (!title.trim()) {
       alert("제목을 입력해주세요.")
@@ -282,7 +267,6 @@ export default function CreatePostPage() {
     }
 
     try {
-      // 게시물 데이터 준비
       const post = {
         title,
         category,
@@ -309,7 +293,6 @@ export default function CreatePostPage() {
         createdAt: new Date().toISOString(),
       }
 
-      // 서버에 게시물 저장 API 호출
       const response = await fetch("/api/publish", {
         method: "POST",
         headers: {
@@ -325,16 +308,12 @@ export default function CreatePostPage() {
       const result = await response.json()
       console.log("저장된 게시물:", result)
       alert(isDraft ? "임시 저장되었습니다." : "게시물이 등록되었습니다.")
-
-      // 저장 후 목록 페이지로 이동
-      // router.push("/posts")
     } catch (error) {
       console.error("게시물 저장 중 오류 발생:", error)
       alert("게시물 저장에 실패했습니다.")
     }
   }
 
-  // 클립보드에서 이미지 붙여넣기 처리
   const handlePaste = async (e: React.ClipboardEvent) => {
     const items = e.clipboardData?.items
     if (!items) return
@@ -350,7 +329,6 @@ export default function CreatePostPage() {
     }
   }
 
-  // 썸네일 클릭 핸들러
   const handleThumbnailClick = (id: string) => {
     setCurrentImageId(id)
   }

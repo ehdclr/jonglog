@@ -42,7 +42,7 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({
       url: fileUrl,
-      fileName: file.name,
+      fileName: fileName,
       fileSize: file.size,
       fileType: file.type,
       isImage,
