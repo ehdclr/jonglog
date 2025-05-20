@@ -1,5 +1,7 @@
 "use client"
 
+import type React from "react"
+
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -10,44 +12,90 @@ import { ArrowLeft, Upload, X, FileIcon, FileText, FileIcon as FilePdf } from "l
 import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarkdownEditor } from "@/components/markdown-editor"
+import { ImageCarousel } from "@/components/image-carousel"
 
-// 파일 업로드 함수
-const uploadFile = async (file: File) => {
-  const formData = new FormData()
-  formData.append("file", file)
+// 이미지 최적화 함수
+const optimizeImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.8): Promise<File> => {
+  return new Promise((resolve) => {
+    const img = new Image()
+    img.onload = () => {
+      const canvas = document.createElement("canvas")
+      let width = img.width
+      let height = img.height
 
-  const response = await fetch("/api/upload", {
-    method: "POST",
-    body: formData,
-    // Content-Type 헤더를 제거하여 브라우저가 자동으로 설정하도록 함
-    // multipart/form-data 경계(boundary)를 자동으로 설정
+      // 최대 크기 제한
+      if (width > maxWidth) {
+        height = (maxWidth / width) * height
+        width = maxWidth
+      }
+
+      if (height > maxHeight) {
+        width = (maxHeight / height) * width
+        height = maxHeight
+      }
+
+      canvas.width = width
+      canvas.height = height
+
+      const ctx = canvas.getContext("2d")
+      ctx?.drawImage(img, 0, 0, width, height)
+
+      canvas.toBlob(
+        (blob) => {
+          if (blob) {
+            resolve(new File([blob], file.name, { type: file.type }))
+          }
+        },
+        file.type,
+        quality,
+      )
+    }
+
+    img.src = URL.createObjectURL(file)
   })
-
-  if (!response.ok) {
-    const error = await response.json()
-    throw new Error(error.message || "파일 업로드에 실패했습니다.")
-  }
-
-  return response.json()
 }
 
-export default function NewPostPage() {
+// 서버에 파일 업로드 함수
+const uploadFileToServer = async (file: File) => {
+  try {
+    const formData = new FormData()
+    formData.append("file", file)
+
+    const response = await fetch("/api/upload", {
+      method: "POST",
+      body: formData,
+    })
+
+    if (!response.ok) {
+      throw new Error("파일 업로드에 실패했습니다.")
+    }
+
+    return await response.json()
+  } catch (error) {
+    console.error("파일 업로드 오류:", error)
+    throw error
+  }
+}
+
+export default function CreatePostPage() {
   const [isPublic, setIsPublic] = useState(true)
   const [markdownContent, setMarkdownContent] = useState("")
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
-  const [carouselImages, setCarouselImages] = useState([])
-  const [attachments, setAttachments] = useState([])
+  const [carouselImages, setCarouselImages] = useState<any[]>([])
+  const [attachments, setAttachments] = useState<any[]>([])
   const [isDragging, setIsDragging] = useState(false)
+  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0)
+  const [isUploading, setIsUploading] = useState(false)
 
   // 파일 업로드 처리
-  const handleFileChange = async (e) => {
+  const handleFileChange = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files) {
       await processFiles(Array.from(e.target.files))
     }
   }
 
-  const handleDragOver = (e) => {
+  const handleDragOver = (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(true)
   }
@@ -56,7 +104,7 @@ export default function NewPostPage() {
     setIsDragging(false)
   }
 
-  const handleDrop = async (e) => {
+  const handleDrop = async (e: React.DragEvent) => {
     e.preventDefault()
     setIsDragging(false)
 
@@ -66,97 +114,209 @@ export default function NewPostPage() {
   }
 
   // 파일 처리 및 분류
-  const processFiles = async (files) => {
+  const processFiles = async (files: File[]) => {
+    setIsUploading(true)
     const newImages = []
     const newAttachments = []
 
     for (const file of files) {
-      const fileObj = {
-        id: Math.random().toString(36).substring(7),
-        name: file.name,
-        size: (file.size / 1024).toFixed(2) + " KB",
-        type: file.type,
-        file: file,
-        preview: file.type.startsWith("image/") ? URL.createObjectURL(file) : null,
-      }
+      try {
+        let processedFile = file
 
-      if (file.type.startsWith("image/")) {
-        newImages.push(fileObj)
-      } else {
-        newAttachments.push(fileObj)
+        // 이미지인 경우 최적화
+        if (file.type.startsWith("image/") && file.size > 1024 * 1024) {
+          processedFile = await optimizeImage(file)
+        }
+
+        // 서버에 파일 업로드
+        const uploadResult = await uploadFileToServer(processedFile)
+
+        const fileObj = {
+          id: uploadResult.fileName || Math.random().toString(36).substring(7),
+          name: file.name,
+          size: (file.size / 1024).toFixed(2) + " KB",
+          type: file.type,
+          url: uploadResult.url,
+          preview: file.type.startsWith("image/") ? uploadResult.url : null,
+          isImage: file.type.startsWith("image/"),
+        }
+
+        if (file.type.startsWith("image/")) {
+          newImages.push(fileObj)
+        } else {
+          newAttachments.push(fileObj)
+        }
+      } catch (error) {
+        console.error("파일 처리 중 오류 발생:", error)
       }
     }
 
     setCarouselImages([...carouselImages, ...newImages])
     setAttachments([...attachments, ...newAttachments])
-
-    // 업로드된 파일들을 서버에 업로드
-    for (const image of newImages) {
-      try {
-        const uploadedImage = await uploadFile(image.file)
-        console.log("Uploaded Image:", uploadedImage)
-      } catch (error) {
-        console.error("Error uploading image:", error)
-      }
-    }
-
-    for (const attachment of newAttachments) {
-      try {
-        const uploadedAttachment = await uploadFile(attachment.file)
-        console.log("Uploaded Attachment:", uploadedAttachment)
-      } catch (error) {
-        console.error("Error uploading attachment:", error)
-      }
-    }
+    setIsUploading(false)
   }
 
-  const removeCarouselImage = (id) => {
+  const removeCarouselImage = async (id: string) => {
+    // 서버에서 파일 삭제 API 호출 (구현 필요)
+    try {
+      const imageToRemove = carouselImages.find((img) => img.id === id)
+      if (imageToRemove && imageToRemove.url) {
+        await fetch("/api/delete-file", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ fileUrl: imageToRemove.url }),
+        })
+      }
+    } catch (error) {
+      console.error("파일 삭제 오류:", error)
+    }
+
     setCarouselImages(carouselImages.filter((image) => image.id !== id))
   }
 
-  const removeAttachment = (id) => {
+  const removeAttachment = async (id: string) => {
+    // 서버에서 파일 삭제 API 호출 (구현 필요)
+    try {
+      const attachmentToRemove = attachments.find((att) => att.id === id)
+      if (attachmentToRemove && attachmentToRemove.url) {
+        await fetch("/api/delete-file", {
+          method: "DELETE",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ fileUrl: attachmentToRemove.url }),
+        })
+      }
+    } catch (error) {
+      console.error("파일 삭제 오류:", error)
+    }
+
     setAttachments(attachments.filter((attachment) => attachment.id !== id))
   }
 
   // 마크다운 에디터에 이미지 삽입
-  const insertImageToEditor = (file) => {
-    const imageUrl = file.preview || "/placeholder.svg"
+  const insertImageToEditor = (file: any) => {
+    const imageUrl = file.url || file.preview || "/placeholder.svg"
     const imageMarkdown = `![${file.name}](${imageUrl})\n`
     setMarkdownContent(markdownContent + imageMarkdown)
   }
 
-  // 이미지 업로드 핸들러 (실제로는 Supabase Storage에 업로드)
-  const handleImageUpload = async (file) => {
-    // 실제 구현에서는 Supabase Storage에 업로드하고 URL 반환
-    return URL.createObjectURL(file)
+  // 이미지 업로드 핸들러 (서버에 업로드)
+  const handleImageUpload = async (file: File) => {
+    try {
+      // 1MB 이상인 경우 최적화
+      let processedFile = file
+      if (file.size > 1024 * 1024) {
+        processedFile = await optimizeImage(file)
+      }
+
+      // 서버에 업로드
+      const uploadResult = await uploadFileToServer(processedFile)
+
+      // 이미지를 캐러셀에도 추가
+      const fileObj = {
+        id: uploadResult.fileName || Math.random().toString(36).substring(7),
+        name: file.name,
+        size: (file.size / 1024).toFixed(2) + " KB",
+        type: file.type,
+        url: uploadResult.url,
+        preview: uploadResult.url,
+        isImage: true,
+      }
+
+      setCarouselImages((prev) => [...prev, fileObj])
+
+      return uploadResult.url
+    } catch (error) {
+      console.error("이미지 업로드 중 오류 발생:", error)
+      throw error
+    }
   }
 
   // 파일 아이콘 선택
-  const getFileIcon = (type) => {
+  const getFileIcon = (type: string) => {
     if (type.includes("pdf")) return <FilePdf className="h-8 w-8" />
     if (type.includes("text")) return <FileText className="h-8 w-8" />
     return <FileIcon className="h-8 w-8" />
   }
 
   // 게시물 저장
-  const savePost = (isDraft = false) => {
-    const post = {
-      title,
-      category,
-      content: markdownContent,
-      isPublic,
-      isDraft,
-      carouselImages,
-      attachments,
-      createdAt: new Date().toISOString(),
+  const savePost = async (isDraft = false) => {
+    if (!title.trim()) {
+      alert("제목을 입력해주세요.")
+      return
     }
 
-    console.log("저장된 게시물:", post)
-    // 실제로는 여기서 Supabase에 저장
+    try {
+      // 게시물 데이터 준비
+      const post = {
+        title,
+        category,
+        content: markdownContent,
+        isPublic,
+        isDraft,
+        carouselImages: carouselImages.map((img) => ({
+          id: img.id,
+          name: img.name,
+          type: img.type,
+          size: img.size,
+          url: img.url,
+        })),
+        attachments: attachments.map((att) => ({
+          id: att.id,
+          name: att.name,
+          type: att.type,
+          size: att.size,
+          url: att.url,
+        })),
+        createdAt: new Date().toISOString(),
+      }
+
+      // 서버에 게시물 저장 API 호출
+      const response = await fetch("/api/publish", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(post),
+      })
+
+      if (!response.ok) {
+        throw new Error("게시물 저장에 실패했습니다.")
+      }
+
+      const result = await response.json()
+      console.log("저장된 게시물:", result)
+      alert(isDraft ? "임시 저장되었습니다." : "게시물이 등록되었습니다.")
+
+      // 저장 후 목록 페이지로 이동
+      // router.push("/posts")
+    } catch (error) {
+      console.error("게시물 저장 중 오류 발생:", error)
+      alert("게시물 저장에 실패했습니다.")
+    }
+  }
+
+  // 클립보드에서 이미지 붙여넣기 처리
+  const handlePaste = async (e: React.ClipboardEvent) => {
+    const items = e.clipboardData?.items
+    if (!items) return
+
+    for (let i = 0; i < items.length; i++) {
+      if (items[i].type.indexOf("image") !== -1) {
+        const file = items[i].getAsFile()
+        if (file) {
+          e.preventDefault()
+          await processFiles([file])
+        }
+      }
+    }
   }
 
   return (
-    <div className="container max-w-4xl py-6">
+    <div className="container max-w-4xl py-6" onPaste={handlePaste}>
       <div className="mb-6">
         <Button variant="ghost" size="sm" asChild>
           <Link href="/posts" className="flex items-center gap-2">
@@ -212,49 +372,57 @@ export default function NewPostPage() {
                 <p className="text-xs text-muted-foreground">
                   이미지는 캐러셀에 표시되고, 다른 파일은 첨부 파일로 표시됩니다
                 </p>
+                <p className="text-xs text-muted-foreground">클립보드에서 이미지를 붙여넣을 수도 있습니다 (Ctrl+V)</p>
                 <Input type="file" className="hidden" id="file-upload" multiple onChange={handleFileChange} />
-                <Button variant="outline" size="sm" onClick={() => document.getElementById("file-upload").click()}>
-                  파일 선택
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => document.getElementById("file-upload")?.click()}
+                  disabled={isUploading}
+                >
+                  {isUploading ? "업로드 중..." : "파일 선택"}
                 </Button>
               </div>
             </div>
           </div>
 
           {carouselImages.length > 0 && (
-            <div className="grid gap-2">
-              <Label>캐러셀 이미지 ({carouselImages.length}개)</Label>
-              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
-                {carouselImages.map((image) => (
-                  <Card key={image.id} className="overflow-hidden">
-                    <CardContent className="p-2">
-                      <div className="relative">
-                        <div className="absolute top-0 right-0 p-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full bg-background/80"
-                            onClick={() => removeCarouselImage(image.id)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
-                        </div>
-                        <div className="relative aspect-square">
-                          <img
-                            src={image.preview || "/placeholder.svg"}
-                            alt={image.name}
-                            className="object-cover w-full h-full rounded"
-                          />
-                          <div className="absolute inset-0 flex items-center justify-center opacity-0 hover:opacity-100 transition-opacity bg-black/50 rounded">
-                            <Button variant="secondary" size="sm" onClick={() => insertImageToEditor(image)}>
-                              본문에도 삽입
-                            </Button>
-                          </div>
-                        </div>
-                        <div className="mt-2 text-xs truncate">{image.name}</div>
-                        <div className="text-xs text-muted-foreground">{image.size}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+            <div className="grid gap-4">
+              <div className="flex items-center justify-between">
+                <Label>캐러셀 이미지 ({carouselImages.length}개)</Label>
+              </div>
+
+              <ImageCarousel images={carouselImages} onInsertImage={insertImageToEditor} />
+
+              <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
+                {carouselImages.map((image, index) => (
+                  <div
+                    key={image.id}
+                    className={`relative aspect-square rounded-md overflow-hidden border-2 cursor-pointer ${
+                      index === currentCarouselIndex ? "border-primary" : "border-transparent"
+                    }`}
+                    onClick={() => setCurrentCarouselIndex(index)}
+                  >
+                    <img
+                      src={image.url || image.preview || "/placeholder.svg"}
+                      alt={image.name}
+                      className="w-full h-full object-cover"
+                      onError={(e) => {
+                        e.currentTarget.src = "/abstract-colorful-swirls.png"
+                      }}
+                    />
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80"
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        removeCarouselImage(image.id)
+                      }}
+                    >
+                      <X className="h-3 w-3" />
+                    </Button>
+                  </div>
                 ))}
               </div>
             </div>

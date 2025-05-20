@@ -5,7 +5,7 @@ import type React from "react"
 import { useState, useRef } from "react"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Bold, Italic, List, ListOrdered, ImageIcon, LinkIcon, Code, Heading1, Heading2, Quote } from "lucide-react"
+import { Bold, Italic, List, ListOrdered, ImageIcon, LinkIcon, Code, Heading1, Heading2, Quote } from 'lucide-react'
 import ReactMarkdown from "react-markdown"
 import remarkGfm from "remark-gfm"
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter"
