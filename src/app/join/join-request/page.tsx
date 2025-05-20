@@ -12,6 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { AlertCircle, ArrowRight, CheckCircle, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
+import { api } from "@/utils/api"
 
 export default function JoinRequestPage() {
   const router = useRouter()
@@ -49,11 +50,11 @@ export default function JoinRequestPage() {
 
     try {
       // 실제 구현에서는 API 호출로 대체
-      // const response = await fetch("/api/join-request", {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ name, email, message }),
-      // })
+      const response = await fetch("/api/join/join-request", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, email, message }),
+      })
 
       // 임시 구현: API 호출 시뮬레이션
       await new Promise((resolve) => setTimeout(resolve, 1500))
