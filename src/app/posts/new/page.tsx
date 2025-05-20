@@ -13,6 +13,7 @@ import Link from "next/link"
 import { Card, CardContent } from "@/components/ui/card"
 import { MarkdownEditor } from "@/components/markdown-editor"
 import { ImageCarousel } from "@/components/image-carousel"
+import { motion } from "framer-motion"
 
 // 이미지 최적화 함수
 const optimizeImage = (file: File, maxWidth = 1200, maxHeight = 1200, quality = 0.8): Promise<File> => {
@@ -82,10 +83,11 @@ export default function CreatePostPage() {
   const [markdownContent, setMarkdownContent] = useState("")
   const [title, setTitle] = useState("")
   const [category, setCategory] = useState("")
-  const [carouselImages, setCarouselImages] = useState<any[]>([])
+  const [carouselImages, setCarouselImages] = useState<Record<string, any>>({})
+  const [imageOrder, setImageOrder] = useState<string[]>([])
+  const [currentImageId, setCurrentImageId] = useState<string | null>(null)
   const [attachments, setAttachments] = useState<any[]>([])
   const [isDragging, setIsDragging] = useState(false)
-  const [currentCarouselIndex, setCurrentCarouselIndex] = useState(0)
   const [isUploading, setIsUploading] = useState(false)
 
   // 파일 업로드 처리
@@ -151,15 +153,26 @@ export default function CreatePostPage() {
       }
     }
 
-    setCarouselImages([...carouselImages, ...newImages])
+    for (const image of newImages) {
+      const imageId = image.id
+      setCarouselImages((prev) => ({
+        ...prev,
+        [imageId]: image,
+      }))
+      setImageOrder((prev) => [...prev, imageId])
+
+      // 첫 번째 이미지인 경우 현재 이미지로 설정
+      if (!currentImageId) {
+        setCurrentImageId(imageId)
+      }
+    }
     setAttachments([...attachments, ...newAttachments])
     setIsUploading(false)
   }
 
   const removeCarouselImage = async (id: string) => {
-    // 서버에서 파일 삭제 API 호출 (구현 필요)
     try {
-      const imageToRemove = carouselImages.find((img) => img.id === id)
+      const imageToRemove = carouselImages[id]
       if (imageToRemove && imageToRemove.url) {
         await fetch("/api/delete-file", {
           method: "DELETE",
@@ -173,7 +186,26 @@ export default function CreatePostPage() {
       console.error("파일 삭제 오류:", error)
     }
 
-    setCarouselImages(carouselImages.filter((image) => image.id !== id))
+    // 이미지 객체에서 해당 ID 제거
+    const newImages = { ...carouselImages }
+    delete newImages[id]
+    setCarouselImages(newImages)
+
+    // 이미지 순서 배열에서도 제거
+    setImageOrder((prev) => prev.filter((imageId) => imageId !== id))
+
+    // 현재 이미지가 삭제된 경우 다른 이미지로 변경
+    if (currentImageId === id) {
+      const newOrder = imageOrder.filter((imageId) => imageId !== id)
+      if (newOrder.length > 0) {
+        // 삭제된 이미지 다음 이미지를 선택하거나, 마지막 이미지를 선택
+        const currentIndex = imageOrder.indexOf(id)
+        const nextIndex = Math.min(currentIndex, newOrder.length - 1)
+        setCurrentImageId(newOrder[nextIndex])
+      } else {
+        setCurrentImageId(null)
+      }
+    }
   }
 
   const removeAttachment = async (id: string) => {
@@ -226,8 +258,8 @@ export default function CreatePostPage() {
         isImage: true,
       }
 
-      setCarouselImages((prev) => [...prev, fileObj])
-
+      setCarouselImages((prev) => ({ ...prev, [fileObj.id]: fileObj }))
+      setImageOrder((prev) => [...prev, fileObj.id])
       return uploadResult.url
     } catch (error) {
       console.error("이미지 업로드 중 오류 발생:", error)
@@ -257,13 +289,16 @@ export default function CreatePostPage() {
         content: markdownContent,
         isPublic,
         isDraft,
-        carouselImages: carouselImages.map((img) => ({
-          id: img.id,
-          name: img.name,
-          type: img.type,
-          size: img.size,
-          url: img.url,
-        })),
+        carouselImages: imageOrder.map((id) => {
+          const img = carouselImages[id]
+          return {
+            id: img.id,
+            name: img.name,
+            type: img.type,
+            size: img.size,
+            url: img.url,
+          }
+        }),
         attachments: attachments.map((att) => ({
           id: att.id,
           name: att.name,
@@ -313,6 +348,11 @@ export default function CreatePostPage() {
         }
       }
     }
+  }
+
+  // 썸네일 클릭 핸들러
+  const handleThumbnailClick = (id: string) => {
+    setCurrentImageId(id)
   }
 
   return (
@@ -386,44 +426,57 @@ export default function CreatePostPage() {
             </div>
           </div>
 
-          {carouselImages.length > 0 && (
+          {imageOrder.length > 0 && (
             <div className="grid gap-4">
               <div className="flex items-center justify-between">
-                <Label>캐러셀 이미지 ({carouselImages.length}개)</Label>
+                <Label>캐러셀 이미지 ({imageOrder.length}개)</Label>
               </div>
 
-              <ImageCarousel images={carouselImages} onInsertImage={insertImageToEditor} />
+              <ImageCarousel
+                images={imageOrder.map((id) => carouselImages[id])}
+                onInsertImage={insertImageToEditor}
+                currentImageId={currentImageId}
+                onImageSelect={setCurrentImageId}
+              />
 
               <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-2">
-                {carouselImages.map((image, index) => (
-                  <div
-                    key={image.id}
-                    className={`relative aspect-square rounded-md overflow-hidden border-2 cursor-pointer ${
-                      index === currentCarouselIndex ? "border-primary" : "border-transparent"
-                    }`}
-                    onClick={() => setCurrentCarouselIndex(index)}
-                  >
-                    <img
-                      src={image.url || image.preview || "/placeholder.svg"}
-                      alt={image.name}
-                      className="w-full h-full object-cover"
-                      onError={(e) => {
-                        e.currentTarget.src = "/abstract-colorful-swirls.png"
-                      }}
-                    />
-                    <Button
-                      variant="ghost"
-                      size="icon"
-                      className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80"
-                      onClick={(e) => {
-                        e.stopPropagation()
-                        removeCarouselImage(image.id)
-                      }}
+                {imageOrder.map((id) => {
+                  const image = carouselImages[id]
+                  return (
+                    <motion.div
+                      key={id}
+                      className={`relative aspect-square rounded-md overflow-hidden border-2 cursor-pointer ${
+                        id === currentImageId ? "border-primary" : "border-transparent"
+                      }`}
+                      onClick={() => handleThumbnailClick(id)}
+                      whileHover={{ scale: 1.05 }}
+                      whileTap={{ scale: 0.95 }}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      animate={{ opacity: 1, scale: 1 }}
+                      transition={{ duration: 0.2 }}
                     >
-                      <X className="h-3 w-3" />
-                    </Button>
-                  </div>
-                ))}
+                      <img
+                        src={image.url || image.preview || "/placeholder.svg"}
+                        alt={image.name}
+                        className="w-full h-full object-cover"
+                        onError={(e) => {
+                          e.currentTarget.src = "/abstract-colorful-swirls.png"
+                        }}
+                      />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        className="absolute top-1 right-1 h-6 w-6 rounded-full bg-background/80"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          removeCarouselImage(id)
+                        }}
+                      >
+                        <X className="h-3 w-3" />
+                      </Button>
+                    </motion.div>
+                  )
+                })}
               </div>
             </div>
           )}
@@ -433,27 +486,34 @@ export default function CreatePostPage() {
               <Label>첨부 파일 ({attachments.length}개)</Label>
               <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
                 {attachments.map((file) => (
-                  <Card key={file.id} className="overflow-hidden">
-                    <CardContent className="p-2">
-                      <div className="relative">
-                        <div className="absolute top-0 right-0 p-1">
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            className="h-6 w-6 rounded-full bg-background/80"
-                            onClick={() => removeAttachment(file.id)}
-                          >
-                            <X className="h-3 w-3" />
-                          </Button>
+                  <motion.div
+                    key={file.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
+                  >
+                    <Card className="overflow-hidden">
+                      <CardContent className="p-2">
+                        <div className="relative">
+                          <div className="absolute top-0 right-0 p-1">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-6 w-6 rounded-full bg-background/80"
+                              onClick={() => removeAttachment(file.id)}
+                            >
+                              <X className="h-3 w-3" />
+                            </Button>
+                          </div>
+                          <div className="flex items-center justify-center aspect-square bg-muted rounded">
+                            {getFileIcon(file.type)}
+                          </div>
+                          <div className="mt-2 text-xs truncate">{file.name}</div>
+                          <div className="text-xs text-muted-foreground">{file.size}</div>
                         </div>
-                        <div className="flex items-center justify-center aspect-square bg-muted rounded">
-                          {getFileIcon(file.type)}
-                        </div>
-                        <div className="mt-2 text-xs truncate">{file.name}</div>
-                        <div className="text-xs text-muted-foreground">{file.size}</div>
-                      </div>
-                    </CardContent>
-                  </Card>
+                      </CardContent>
+                    </Card>
+                  </motion.div>
                 ))}
               </div>
             </div>
