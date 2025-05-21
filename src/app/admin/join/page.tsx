@@ -40,28 +40,11 @@ interface JoinRequest {
   name: string;
   email: string;
   message?: string;
-  status: "pending" | "approved" | "rejected" | "expired";
+  status: "pending" | "accepted" | "rejected" | "expired";
   createdAt: string;
   updatedAt?: string;
   expiredAt?: string;
 }
-
-// 임시 데이터
-const MOCK_REQUESTS: JoinRequest[] = Array.from({ length: 10 }).map((_, i) => ({
-  id: `req-${i + 1}`,
-  name: `사용자 ${i + 1}`,
-  email: `user${i + 1}@example.com`,
-  message:
-    i % 3 === 0
-      ? undefined
-      : `안녕하세요, 블로그에 가입하고 싶습니다. ${i + 1}`,
-  status: i % 3 === 0 ? "approved" : i % 3 === 1 ? "rejected" : "pending",
-  createdAt: new Date(Date.now() - i * 86400000 * 2).toISOString(),
-  updatedAt:
-    i % 3 !== 2 ? new Date(Date.now() - i * 86400000).toISOString() : undefined,
-  expiredAt:
-    i % 3 === 0 ? new Date(Date.now() + 86400000 * 2).toISOString() : undefined,
-}));
 
 export default function JoinRequestsPage() {
   const { accessToken } = useAuthStore();
@@ -75,7 +58,7 @@ export default function JoinRequestsPage() {
   const [selectedRequest, setSelectedRequest] = useState<JoinRequest | null>(
     null
   );
-  const [isApproveDialogOpen, setIsApproveDialogOpen] = useState(false);
+  const [isAcceptDialogOpen, setIsAcceptDialogOpen] = useState(false);
   const [isRejectDialogOpen, setIsRejectDialogOpen] = useState(false);
   const [rejectReason, setRejectReason] = useState("");
 
@@ -108,7 +91,7 @@ export default function JoinRequestsPage() {
     const matchesTab =
       activeTab === "all" ||
       (activeTab === "pending" && request.status === "pending") ||
-      (activeTab === "approved" && request.status === "approved") ||
+      (activeTab === "accepted" && request.status === "accepted") ||
       (activeTab === "rejected" && request.status === "rejected");
 
     return matchesSearch && matchesTab;
@@ -127,21 +110,32 @@ export default function JoinRequestsPage() {
   };
 
   // 요청 승인 처리
-  const handleApprove = async () => {
+  const handleAccept = async () => {
     if (!selectedRequest) return;
 
     setProcessingId(selectedRequest.id);
 
     try {
       // 실제 구현에서는 API 호출로 대체
-      // const response = await fetch(`/api/join-requests/${selectedRequest.id}/approve`, {
-      //   method: "POST",
-      // })
+      const response = await api.post(
+        `/api/admin/join/${selectedRequest.id}/accept`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+          },
+          withCredentials: true,
+        }
+      );
 
-      // 임시 구현: API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // if (!response.ok) throw new Error("요청 처리 중 오류가 발생했습니다.")
+      const { data } = response.data;
+      if (!data.success) {
+        toast({
+          title: "승인 실패",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
 
       // 상태 업데이트
       setRequests((prev) =>
@@ -149,7 +143,7 @@ export default function JoinRequestsPage() {
           req.id === selectedRequest.id
             ? {
                 ...req,
-                status: "approved",
+                status: "accepted",
                 updatedAt: new Date().toISOString(),
               }
             : req
@@ -170,7 +164,7 @@ export default function JoinRequestsPage() {
     } finally {
       setProcessingId(null);
       setSelectedRequest(null);
-      setIsApproveDialogOpen(false);
+      setIsAcceptDialogOpen(false);
     }
   };
 
@@ -188,14 +182,22 @@ export default function JoinRequestsPage() {
           headers: {
             "Content-Type": "application/json",
             Authorization: `Bearer ${accessToken}`,
-        },
-        withCredentials: true,
-        body: JSON.stringify({
-          reason: rejectReason,
-        }),
-      });
+          },
+          withCredentials: true,
+          body: JSON.stringify({
+            reason: rejectReason,
+          }),
+        }
+      );
 
       const { data } = response.data;
+      if (!data.success) {
+        toast({
+          title: "거절 실패",
+          description: data.message,
+          variant: "destructive",
+        });
+      }
 
       // 상태 업데이트
       setRequests((prev) =>
@@ -283,10 +285,10 @@ export default function JoinRequestsPage() {
                   {requests.filter((r) => r.status === "pending").length}
                 </Badge>
               </TabsTrigger>
-              <TabsTrigger value="approved" className="flex items-center gap-2">
+              <TabsTrigger value="accepted" className="flex items-center gap-2">
                 승인됨
                 <Badge variant="secondary" className="ml-1">
-                  {requests.filter((r) => r.status === "approved").length}
+                  {requests.filter((r) => r.status === "accepted").length}
                 </Badge>
               </TabsTrigger>
               <TabsTrigger value="rejected" className="flex items-center gap-2">
@@ -304,7 +306,7 @@ export default function JoinRequestsPage() {
           <TabsContent value="pending" className="mt-6">
             {renderRequestList(filteredRequests)}
           </TabsContent>
-          <TabsContent value="approved" className="mt-6">
+          <TabsContent value="accepted" className="mt-6">
             {renderRequestList(filteredRequests)}
           </TabsContent>
           <TabsContent value="rejected" className="mt-6">
@@ -314,7 +316,7 @@ export default function JoinRequestsPage() {
       </div>
 
       {/* 승인 확인 다이얼로그 */}
-      <Dialog open={isApproveDialogOpen} onOpenChange={setIsApproveDialogOpen}>
+      <Dialog open={isAcceptDialogOpen} onOpenChange={setIsAcceptDialogOpen}>
         <DialogContent>
           <DialogHeader>
             <DialogTitle>가입 요청 승인</DialogTitle>
@@ -352,12 +354,12 @@ export default function JoinRequestsPage() {
           <DialogFooter>
             <Button
               variant="outline"
-              onClick={() => setIsApproveDialogOpen(false)}
+              onClick={() => setIsAcceptDialogOpen(false)}
             >
               취소
             </Button>
             <Button
-              onClick={handleApprove}
+              onClick={handleAccept}
               disabled={processingId === selectedRequest?.id}
             >
               {processingId === selectedRequest?.id ? (
@@ -476,7 +478,7 @@ export default function JoinRequestsPage() {
               ? `${
                   activeTab === "pending"
                     ? "대기 중인"
-                    : activeTab === "approved"
+                    : activeTab === "accepted"
                     ? "승인된"
                     : "거절된"
                 } 가입 요청이 없습니다.`
@@ -507,7 +509,7 @@ export default function JoinRequestsPage() {
                         variant={
                           request.status === "pending"
                             ? "outline"
-                            : request.status === "approved"
+                            : request.status === "accepted"
                             ? "default"
                             : "destructive"
                         }
@@ -515,14 +517,14 @@ export default function JoinRequestsPage() {
                       >
                         {request.status === "pending" ? (
                           <Clock className="mr-1 h-3 w-3" />
-                        ) : request.status === "approved" ? (
+                        ) : request.status === "accepted" ? (
                           <CheckCircle className="mr-1 h-3 w-3" />
                         ) : (
                           <XCircle className="mr-1 h-3 w-3" />
                         )}
                         {request.status === "pending"
                           ? "대기 중"
-                          : request.status === "approved"
+                          : request.status === "accepted"
                           ? "승인됨"
                           : "거절됨"}
                       </Badge>
@@ -557,7 +559,7 @@ export default function JoinRequestsPage() {
                         className="flex-1 md:flex-none"
                         onClick={() => {
                           setSelectedRequest(request);
-                          setIsApproveDialogOpen(true);
+                          setIsAcceptDialogOpen(true);
                         }}
                         disabled={processingId === request.id}
                       >

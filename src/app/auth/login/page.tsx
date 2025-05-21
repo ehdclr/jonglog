@@ -9,13 +9,13 @@ import { Label } from "@/components/ui/label"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Loader2 } from 'lucide-react'
 import { useAuthStore } from "@/store"
-
+import { useToast } from "@/hooks/use-toast"
 
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
   const router = useRouter()
-  
+  const { toast } = useToast()
   const { login, loading, error, isAdmin, clearError } = useAuthStore()
   
   // 이미 로그인한 경우 대시보드로 리디렉션
@@ -39,7 +39,11 @@ export default function AdminLoginPage() {
     const { success, message } = await login(email, password)
 
     if (!success) {
-      alert(message)
+      toast({
+        title: "로그인 실패",
+        description: message,
+        variant: "destructive",
+      })
       return
     }
 

@@ -5,9 +5,9 @@ const GRAPHQL_ENDPOINT =
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { reqeustId: string } }
+  { params }: { params: { requestId: string } }
 ) {
-  const { reqeustId } = params;
+  const { requestId } = params;
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const authorization = request.headers.get("authorization");
 
@@ -29,7 +29,7 @@ export async function POST(
         }
       `,
         variables: {
-          requestId: reqeustId,
+          requestId: requestId,
           status: "rejected",
         },
       }),

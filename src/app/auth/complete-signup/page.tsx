@@ -54,10 +54,20 @@ export default function CompleteSignupPage() {
     const fetchSignupRequest = async () => {
       try {
         setIsLoading(true);
-        const response = await axios.get(`/api/auth/signup-request/${signupRequestId}`);
+        const response = await fetch(`/api/auth/signup-request/${signupRequestId}`,{
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+        });
+        const {success, message, payload} = await response.json();
+        if(!success) {
+          setError(message);
+          return;
+        }
         
-        if (response.data.email) {
-          setUserEmail(response.data.email);
+        if (payload.email) {
+          setUserEmail(payload.email);
         } else {
           setError("가입 요청 정보를 찾을 수 없습니다.");
         }
