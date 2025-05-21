@@ -87,7 +87,7 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
         </div>
 
         {/* 관리자 전용 메뉴 */}
-        {isAdmin && (
+        {user?.role === "owner" && (
           <div className="px-3 py-2">
             <h2 className="mb-2 px-4 text-lg font-semibold tracking-tight">
               관리자 메뉴
@@ -131,7 +131,7 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
                   className="w-full justify-start gap-2"
                   asChild
                 >
-                  <Link href="/admin/join-request">
+                  <Link href="/admin/join">
                     <UserPlus className="h-4 w-4" />
                     가입 요청 관리
                   </Link>

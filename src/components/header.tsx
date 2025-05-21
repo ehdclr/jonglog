@@ -86,7 +86,7 @@ export function Header() {
           </DropdownMenu>
         ) : (
           <Button variant="outline" size="sm" asChild>
-            <Link href="/admin/login">로그인</Link>
+            <Link href="/auth/login">로그인</Link>
           </Button>
         )}
       </div>

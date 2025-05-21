@@ -10,12 +10,13 @@ interface AuthState {
   loading: boolean
   error: string | null
   isAdmin: boolean
-  
+  hasHydrated: boolean
   login: (email: string, password: string) => Promise<{ success: boolean; message: string }>
   logout: () => Promise<void>
   setUser: (user: User | null) => void
   setAccessToken: (token: string | null) => void
   clearError: () => void
+  setHasHydrated: (value: boolean) => void
 }
 
 export const useAuthStore = create<AuthState>()(
@@ -26,11 +27,14 @@ export const useAuthStore = create<AuthState>()(
       loading: false,
       error: null,
       isAdmin: false,
+      hasHydrated: false,
       
       setUser: (user) => set({ 
         user, 
         isAdmin: user?.role === "owner" || user?.role === "admin" 
       }),
+
+      setHasHydrated: (value: boolean) => set({ hasHydrated: value }),
       
       setAccessToken: (accessToken) => set({ accessToken }),
       
@@ -65,7 +69,8 @@ export const useAuthStore = create<AuthState>()(
       logout: async () => {
         set({ loading: true })
         try {
-          await api.post('/api/auth/logout', {
+          await fetch('/api/auth/logout', {
+            method: 'POST',
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${get().accessToken}`
@@ -87,8 +92,10 @@ export const useAuthStore = create<AuthState>()(
     {
       name: 'auth-storage',
       storage: createJSONStorage(() => localStorage),
-      // accessToken만 localStorage에 저장하고 나머지는 메모리에만 유지
-      partialize: (state) => ({ accessToken: state.accessToken }),
+      partialize: (state) => ({ accessToken: state.accessToken ,user: state.user}),
+      onRehydrateStorage: () => (state) => {
+        state?.setHasHydrated(true)
+      },
     }
   )
 )

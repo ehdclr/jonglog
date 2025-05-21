@@ -38,22 +38,19 @@ export async function POST(request: NextRequest) {
     })
     
     const { data, errors } = await response.json()
-    
-    if (errors) {
-      return NextResponse.json(
-        { success: false, message: errors[0].message },
-        { status: 400 }
-      )
+    const res = data.login;
+
+    if(!res.success) {
+        throw new Error(res.message)
     }
-    
     // GraphQL 서버에서 설정한 쿠키가 있으면 클라이언트에 전달
     const setCookieHeader = response.headers.get('set-cookie')
-    const nextResponse = NextResponse.json(data.login)
+    const nextResponse = NextResponse.json(res)
     
     if (setCookieHeader) {
       nextResponse.headers.set('set-cookie', setCookieHeader)
     }
-    
+
     return nextResponse
   } catch (error: any) {
     return NextResponse.json(

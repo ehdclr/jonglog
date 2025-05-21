@@ -3,27 +3,20 @@
 import { useEffect } from "react"
 import { useRouter } from "next/navigation"
 import { Loader2 } from 'lucide-react'
-import { useAuthStore } from "@/store"
+import { useAuthStore } from "@/store/auth-store"
 
 export default function AdminLayout({
   children,
 }: {
   children: React.ReactNode
 }) {
-  const { loading, isAdmin } = useAuthStore()
+  const { user, accessToken,loading, isAdmin } = useAuthStore()
   const router = useRouter()
-
-  useEffect(() => {
-    if (!loading && !isAdmin) {
-      router.push("/admin/login")
-    }
-  }, [loading, isAdmin, router])
   
-  if (loading) {
+  if (user?.role !== "owner") {
     return (
       <div className="flex justify-center items-center min-h-screen">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-        <span className="ml-2">로딩 중...</span>
+        <span className="ml-2">접근권한이 없습니다.</span>
       </div>
     )
   }

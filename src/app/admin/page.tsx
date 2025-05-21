@@ -12,14 +12,17 @@ import {
 } from "@/components/ui/card";
 
 export default function AdminDashboardPage() {
-  const { user } = useAuthStore();
+  const { user, accessToken } = useAuthStore();
   const router = useRouter();
 
+  
+
   useEffect(() => {
-    if (user?.role !== "owner" && user?.role !== "admin") {
+    console.log(" accessToken ", accessToken);
+    if (!accessToken) {
       router.push("/admin/login");
     }
-  }, [user, router]);
+  }, [accessToken, router]);
 
   return (
     <div className="space-y-6">

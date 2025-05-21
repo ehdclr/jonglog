@@ -10,6 +10,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Loader2 } from 'lucide-react'
 import { useAuthStore } from "@/store"
 
+
 export default function AdminLoginPage() {
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
@@ -35,11 +36,14 @@ export default function AdminLoginPage() {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     
-    const { success } = await login(email, password)
-    
-    if (success) {
-      router.push("/admin")
+    const { success, message } = await login(email, password)
+
+    if (!success) {
+      alert(message)
+      return
     }
+
+    router.push("/admin")
   }
 
   return (

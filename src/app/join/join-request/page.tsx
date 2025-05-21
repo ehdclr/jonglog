@@ -22,6 +22,12 @@ export default function JoinRequestPage() {
   const [message, setMessage] = useState("")
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [isSuccess, setIsSuccess] = useState(false)
+  const [requestData, setRequestData] = useState({
+    status: "pending",
+    message: "",
+    canResend: false,
+    expiresAt: null,
+  })
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -56,11 +62,11 @@ export default function JoinRequestPage() {
         body: JSON.stringify({ name, email, message }),
       })
 
-      // 임시 구현: API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1500))
-
-      // if (!response.ok) throw new Error("요청 처리 중 오류가 발생했습니다.")
-
+            
+      if (!response.ok) throw new Error("요청 처리 중 오류가 발생했습니다.")
+      const data = await response.json()
+      
+      setRequestData({...data})
       setIsSuccess(true)
       toast({
         title: "요청 완료",
@@ -95,10 +101,12 @@ export default function JoinRequestPage() {
                   <CheckCircle className="h-8 w-8 text-green-600 dark:text-green-400" />
                 </div>
                 <h3 className="text-xl font-semibold">요청이 접수되었습니다</h3>
-                <p className="text-muted-foreground">
+                {requestData.status === "pending" ? <p className="text-muted-foreground">
                   관리자 승인 후 <span className="font-medium text-foreground">{email}</span> 주소로 가입 안내 메일이
                   발송됩니다.
-                </p>
+                </p> : <p className="text-muted-foreground">
+                  {requestData.message}
+                </p>}
                 <Button variant="outline" className="mt-4" onClick={() => router.push("/")}>
                   홈으로 돌아가기
                 </Button>
