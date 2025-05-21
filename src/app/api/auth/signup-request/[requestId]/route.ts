@@ -11,8 +11,6 @@ export async function POST(
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const authorization = request.headers.get("authorization");
 
-  console.log("requestId", requestId);
-
   try {
     const response = await fetch(GRAPHQL_ENDPOINT, {
       method: "POST",
@@ -51,11 +49,16 @@ export async function POST(
       throw new Error(res.message);
     }
 
+    if(res.signUpRequest.status !== "accepted" || res.signUpRequest.expiresAt < new Date()) {
+      throw new Error("가입 요청이 만료되었거나 거절되었습니다.");
+    }
+
     return NextResponse.json({
       success: res.success || false,
       message: res.message || "가입 요청 조회 성공",
       payload: res.signUpRequest,
     });
+
   } catch (error) {
     return NextResponse.json({
       success: false,

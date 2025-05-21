@@ -8,7 +8,6 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     // 예: localStorage에 토큰이 있으면 서버에서 유저 정보 fetch
     if (accessToken && !user) {
-      // 서버에 유저 정보 요청
       fetch("/api/auth/me", {
         method: "POST",
         headers: { Authorization: `Bearer ${accessToken}` },
