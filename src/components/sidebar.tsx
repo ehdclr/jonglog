@@ -38,9 +38,11 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
     >
       <div className="space-y-4 py-4">
         <div className="px-4 py-2">
-          <Button variant="outline" className="w-full justify-start gap-2">
-            <Plus className="h-4 w-4" />새 게시물
-          </Button>
+          {user?.role === "owner" && (
+            <Button variant="outline" className="w-full justify-start gap-2">
+              <Plus className="h-4 w-4" />새 게시물
+            </Button>
+          )}
         </div>
         <div className="px-3">
           <div className="space-y-1">
@@ -156,12 +158,14 @@ export function Sidebar({ className }: React.HTMLAttributes<HTMLDivElement>) {
                   {category}
                 </Button>
               ))}
-              <Button
-                variant="ghost"
-                className="w-full justify-start font-normal text-muted-foreground"
+              {user?.role === "owner" && (
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start font-normal text-muted-foreground"
               >
-                <Plus className="mr-2 h-4 w-4" />새 카테고리
-              </Button>
+                  <Plus className="mr-2 h-4 w-4" />새 카테고리
+                </Button>
+              )}
             </div>
           </ScrollArea>
         </div>

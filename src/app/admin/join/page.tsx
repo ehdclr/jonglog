@@ -182,16 +182,20 @@ export default function JoinRequestsPage() {
 
     try {
       // 실제 구현에서는 API 호출로 대체
-      // const response = await fetch(`/api/join-requests/${selectedRequest.id}/reject`, {
-      //   method: "POST",
-      //   headers: { "Content-Type": "application/json" },
-      //   body: JSON.stringify({ reason: rejectReason }),
-      // })
+      const response = await api.post(
+        `/api/admin/join/${selectedRequest.id}/reject`,
+        {
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${accessToken}`,
+        },
+        withCredentials: true,
+        body: JSON.stringify({
+          reason: rejectReason,
+        }),
+      });
 
-      // 임시 구현: API 호출 시뮬레이션
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      // if (!response.ok) throw new Error("요청 처리 중 오류가 발생했습니다.")
+      const { data } = response.data;
 
       // 상태 업데이트
       setRequests((prev) =>

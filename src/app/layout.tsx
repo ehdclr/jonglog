@@ -6,6 +6,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { AuthInitializer } from "@/app/providers";
+import { Toaster } from "@/components/ui/toaster";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -46,6 +47,7 @@ export default function RootLayout({
               <div className="flex flex-1 w-full">
                 <Sidebar />
                 <main className="flex-1 p-6">{children}</main>
+                <Toaster />
               </div>
             </div>
           </ThemeProvider>

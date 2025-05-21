@@ -12,7 +12,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { useToast } from "@/hooks/use-toast"
 import { AlertCircle, ArrowRight, CheckCircle, Loader2 } from "lucide-react"
 import { motion } from "framer-motion"
-import { api } from "@/utils/api"
+
 
 export default function JoinRequestPage() {
   const router = useRouter()
@@ -55,17 +55,22 @@ export default function JoinRequestPage() {
     setIsSubmitting(true)
 
     try {
-      // 실제 구현에서는 API 호출로 대체
       const response = await fetch("/api/join/join-request", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, email, message }),
       })
 
-            
-      if (!response.ok) throw new Error("요청 처리 중 오류가 발생했습니다.")
       const data = await response.json()
-      
+      if(!data.success) {
+        toast({
+          title: "요청 실패",
+          description: data.message,
+          variant: "destructive",
+        })
+        return
+      }
+            
       setRequestData({...data})
       setIsSuccess(true)
       toast({
@@ -76,7 +81,7 @@ export default function JoinRequestPage() {
       console.error("가입 요청 오류:", error)
       toast({
         title: "요청 실패",
-        description: "가입 요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
+        description: error.message||"가입 요청 처리 중 오류가 발생했습니다. 다시 시도해주세요.",
         variant: "destructive",
       })
     } finally {
