@@ -209,6 +209,7 @@ export default function CompleteSignupPage() {
           password: data.password,
           bio: data.bio || "",
           avatarUrl: data.avatarUrl || "",
+          email: userEmail,
         }),
       })
 

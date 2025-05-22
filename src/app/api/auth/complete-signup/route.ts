@@ -6,7 +6,7 @@ export async function POST(
   request: NextRequest,
 ) {
 
-  const { name, password, bio, avatarUrl, signupRequestId } = await request.json();
+  const { name, password, bio, avatarUrl, signupRequestId, email } = await request.json();
 
   try {
     const response = await fetch(GRAPHQL_ENDPOINT, {
@@ -25,18 +25,17 @@ export async function POST(
       `,
         variables: {
           createUserInput: {
+            email,
             name,
             password,
             bio,
-            avatar_url: avatarUrl || "",
+            avatarUrl,
             role: "admin",
           },
           signupRequestId,
         },
       }),
     });
-
-    console.log('response', response);
 
     const { data, errors } = await response.json();
     const res = data.createUser;

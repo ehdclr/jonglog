@@ -3,11 +3,7 @@ import { NextRequest, NextResponse } from "next/server";
 const GRAPHQL_ENDPOINT =
   process.env.NEXT_PUBLIC_GRAPHQL_URL || "http://localhost:8080/graphql";
 
-export async function POST(
-  request: NextRequest,
-  { params }: { params: { requestId: string } }
-) {
-  const { requestId } = params;
+export async function POST(request: NextRequest) {
   const refreshToken = request.cookies.get("refreshToken")?.value;
   const authorization = request.headers.get("authorization");
 
@@ -21,32 +17,36 @@ export async function POST(
       },
       body: JSON.stringify({
         query: `
-        mutation ProcessSignUpRequest($requestId: String!, $status: String!) {
-          processSignUpRequest(requestId: $requestId, status: $status) {
+        query getAllUsers {
+          getAllUsers {
+            users {
+              id
+              name
+              email
+              role
+              avatar_url
+              bio
+            }
             success
             message
           }
         }
-      `,
-        variables: {
-          requestId: requestId,
-          status: "accepted",
-        },
+        `,
       }),
     });
 
     const { data, errors } = await response.json();
-    const res = data.processSignUpRequest;
-  
+    console.log("data", data);
+    const res = data.getAllUsers;
     if (!res.success) {
       throw new Error(res.message);
     }
-
     return NextResponse.json(res);
-  } catch (error) {
-    return NextResponse.json({
-      success: false,
-      message: error.message || "조회 중 오류가 발생했습니다.",
-    });
+  } catch (error: any) {
+    console.error("GraphQL 요청 오류:", error);
+    return NextResponse.json(
+      { error: error.message || "GraphQL 요청 오류" },
+      { status: 500 }
+    );
   }
 }

@@ -1,62 +1,84 @@
-"use client"
+"use client";
 
-import { useState } from "react"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
-import { Badge } from "@/components/ui/badge"
-import { Switch } from "@/components/ui/switch"
-import { User, Mail, Shield, UserPlus, Trash, MoreHorizontal, Upload } from "lucide-react"
+import { useState, useMemo, useCallback } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
+import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { Switch } from "@/components/ui/switch";
+import {
+  User,
+  Mail,
+  Shield,
+  UserPlus,
+  Trash,
+  MoreHorizontal,
+  Upload,
+} from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-
-// 가상의 관리자 데이터
-const dummyAdmins = [
-  {
-    id: 1,
-    name: "관리자",
-    email: "admin@example.com",
-    role: "소유자",
-    avatar: "/abstract-geometric-shapes.png",
-  },
-  {
-    id: 2,
-    name: "부관리자",
-    email: "subadmin@example.com",
-    role: "관리자",
-    avatar: null,
-  },
-]
+} from "@/components/ui/dropdown-menu";
+import { useAuthStore } from "@/store/auth-store";
+import { useEffect } from "react";
+import { User as UserType } from "@/types/auth";
+import { api } from "@/utils/api";
+import { debounce } from "lodash";
 
 export default function SettingsPage() {
-  const [admins, setAdmins] = useState(dummyAdmins)
-  const [newAdminEmail, setNewAdminEmail] = useState("")
+  const [userList, setUserList] = useState([]);
+  const [searchQuery, setSearchQuery] = useState("");
+  const { user, accessToken } = useAuthStore();
+  const [allUsers, setAllUsers] = useState([]);
 
-  const addAdmin = () => {
-    if (newAdminEmail) {
-      const newAdmin = {
-        id: admins.length + 1,
-        name: "새 관리자",
-        email: newAdminEmail,
-        role: "관리자",
-        avatar: null,
-      }
-      setAdmins([...admins, newAdmin])
-      setNewAdminEmail("")
-    }
-  }
+  useEffect(() => {
+    const fetchUserList = async () => {
+      const response = await api.post("/api/admin/users", {
+        headers: {
+          Authorization: `${accessToken}`,
+        },
+        withCredentials: true,
+      });
+      const data = await response.data;
+      setUserList(data.users);
+      setAllUsers(data.users); // 전체 목록 저장
+    };
+    fetchUserList();
+  }, []);
 
-  const removeAdmin = (id: number) => {
-    setAdmins(admins.filter((admin) => admin.id !== id))
-  }
+  const filteredUsers = useMemo(() => {
+    if (!searchQuery.trim()) return allUsers;
+    
+    return allUsers.filter(
+      (user: UserType) =>
+        user.name.includes(searchQuery) || 
+        user.email.includes(searchQuery)
+    );
+  }, [allUsers, searchQuery]);
+
+  const debouncedSearch = useCallback(
+    debounce((query: string) => {
+      setSearchQuery(query);
+    }, 100),
+    []
+  );
+
+  const removeAdmin = (id: string) => {
+    setUserList(userList.filter((user: UserType) => user.id !== id));
+  };
 
   return (
     <div className="container py-6">
@@ -65,44 +87,55 @@ export default function SettingsPage() {
       <Tabs defaultValue="profile" className="space-y-4">
         <TabsList>
           <TabsTrigger value="profile">프로필</TabsTrigger>
-          <TabsTrigger value="admins">관리자</TabsTrigger>
-          <TabsTrigger value="blog">블로그 설정</TabsTrigger>
+          {user?.role === "owner" && (
+            <TabsTrigger value="admins">사용자 관리</TabsTrigger>
+          )}
+          {user?.role === "owner" && (
+            <TabsTrigger value="blog">블로그 설정</TabsTrigger>
+          )}
         </TabsList>
 
         <TabsContent value="profile" className="space-y-4">
           <Card>
             <CardHeader>
               <CardTitle>프로필</CardTitle>
-              <CardDescription>개인 정보를 관리하고 프로필을 업데이트하세요.</CardDescription>
+              <CardDescription>
+                개인 정보를 관리하고 프로필을 업데이트하세요.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
                 <Avatar className="h-20 w-20">
-                  <AvatarImage src="/abstract-geometric-shapes.png" alt="프로필 이미지" />
-                  <AvatarFallback>사용자</AvatarFallback>
+                  <AvatarImage
+                    src="/abstract-geometric-shapes.png"
+                    alt="프로필 이미지"
+                  />
+                  <AvatarFallback>{user?.name?.[0]}</AvatarFallback>
                 </Avatar>
                 <div className="flex flex-col gap-2">
                   <Button variant="outline" size="sm" className="gap-2">
                     <Upload className="h-4 w-4" />
                     이미지 변경
                   </Button>
-                  <p className="text-xs text-muted-foreground">JPG, PNG 또는 GIF. 최대 2MB.</p>
+                  <p className="text-xs text-muted-foreground">
+                    JPG, PNG 또는 GIF. 최대 2MB.
+                  </p>
                 </div>
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="name">이름</Label>
-                <Input id="name" defaultValue="관리자" />
+                <Input id="name" defaultValue={user?.name} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="email">이메일</Label>
-                <Input id="email" type="email" defaultValue="admin@example.com" />
+                <Input id="email" type="email" defaultValue={user?.email} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="bio">소개</Label>
-                <Input id="bio" defaultValue="개인 블로그 운영자입니다." />
+                <Input id="bio" defaultValue={user?.bio} />
               </div>
             </CardContent>
             <CardFooter>
@@ -115,52 +148,63 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>관리자 관리</CardTitle>
-              <CardDescription>블로그 관리자를 추가하거나 제거합니다.</CardDescription>
+              <CardDescription>
+                블로그 관리자를 추가하거나 제거합니다.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="flex flex-col sm:flex-row gap-2">
                 <div className="flex-1">
                   <Input
-                    placeholder="관리자 이메일 입력"
-                    value={newAdminEmail}
-                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    placeholder="사용자 검색(이메일 혹은 이름 입력)"
+                    onChange={(e) => debouncedSearch(e.target.value)}
                   />
                 </div>
-                <Button onClick={addAdmin} className="gap-2">
-                  <UserPlus className="h-4 w-4" />
-                  관리자 추가
-                </Button>
               </div>
 
               <div className="space-y-2">
-                {admins.map((admin) => (
-                  <div key={admin.id} className="flex items-center justify-between p-3 border rounded-md">
+                {filteredUsers.map((user: UserType) => (
+                  <div
+                    key={user.id}
+                    className="flex items-center justify-between p-3 border rounded-md"
+                  >
                     <div className="flex items-center gap-3">
                       <Avatar className="h-8 w-8">
-                        <AvatarImage src={admin.avatar || "/placeholder.svg"} alt={admin.name} />
-                        <AvatarFallback>{admin.name[0]}</AvatarFallback>
+                        <AvatarImage
+                          src={user.avatarUrl || "/placeholder.svg"}
+                          alt={user.name}
+                        />
+                        <AvatarFallback>{user.name[0]}</AvatarFallback>
                       </Avatar>
                       <div>
-                        <div className="font-medium">{admin.name}</div>
-                        <div className="text-sm text-muted-foreground">{admin.email}</div>
+                        <div className="font-medium">{user.name}</div>
+                        <div className="text-sm text-muted-foreground">
+                          {user.email}
+                        </div>
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Badge variant={admin.role === "소유자" ? "default" : "outline"}>
-                        {admin.role === "소유자" ? (
+                      <Badge
+                        variant={user.role === "owner" ? "default" : "outline"}
+                      >
+                        {user.role === "owner" ? (
                           <div className="flex items-center gap-1">
                             <Shield className="h-3 w-3" />
-                            {admin.role}
+                            {user.role}
                           </div>
                         ) : (
-                          admin.role
+                          user.role
                         )}
                       </Badge>
 
-                      {admin.role !== "소유자" && (
+                      {user.role !== "owner" && (
                         <DropdownMenu>
                           <DropdownMenuTrigger asChild>
-                            <Button variant="ghost" size="icon" className="h-8 w-8">
+                            <Button
+                              variant="ghost"
+                              size="icon"
+                              className="h-8 w-8"
+                            >
                               <MoreHorizontal className="h-4 w-4" />
                             </Button>
                           </DropdownMenuTrigger>
@@ -169,12 +213,11 @@ export default function SettingsPage() {
                               <User className="mr-2 h-4 w-4" />
                               프로필 보기
                             </DropdownMenuItem>
-                            <DropdownMenuItem>
-                              <Mail className="mr-2 h-4 w-4" />
-                              이메일 보내기
-                            </DropdownMenuItem>
                             <DropdownMenuSeparator />
-                            <DropdownMenuItem className="text-destructive" onClick={() => removeAdmin(admin.id)}>
+                            <DropdownMenuItem
+                              className="text-destructive"
+                              onClick={() => removeAdmin(user.id)}
+                            >
                               <Trash className="mr-2 h-4 w-4" />
                               관리자 제거
                             </DropdownMenuItem>
@@ -193,7 +236,9 @@ export default function SettingsPage() {
           <Card>
             <CardHeader>
               <CardTitle>블로그 설정</CardTitle>
-              <CardDescription>블로그의 기본 설정을 관리합니다.</CardDescription>
+              <CardDescription>
+                블로그의 기본 설정을 관리합니다.
+              </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4">
               <div className="grid gap-2">
@@ -203,22 +248,34 @@ export default function SettingsPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-description">블로그 설명</Label>
-                <Input id="blog-description" defaultValue="개인 기록과 생각을 공유하는 공간입니다." />
+                <Input
+                  id="blog-description"
+                  defaultValue="개인 기록과 생각을 공유하는 공간입니다."
+                />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Switch id="comments-enabled" defaultChecked />
-                <Label htmlFor="comments-enabled">댓글 허용</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="blog-url">깃허브 주소 공개</Label>
+                <Input
+                  id="blog-url"
+                  defaultValue={`https://github.com/${user?.name}`}
+                />
+                <Switch id="blog-description" defaultChecked />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Switch id="public-profile" defaultChecked />
-                <Label htmlFor="public-profile">공개 프로필</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="blog-url">이메일 주소 공개</Label>
+                <Input id="blog-url" defaultValue={`${user?.email}`} />
+                <Switch id="blog-description" defaultChecked />
               </div>
 
-              <div className="flex items-center gap-2">
-                <Switch id="show-contribution" defaultChecked />
-                <Label htmlFor="show-contribution">활동 그래프 공개</Label>
+              <div className="grid gap-2">
+                <Label htmlFor="blog-url">SNS 주소 공개</Label>
+                <Input
+                  id="blog-url"
+                  defaultValue={`https://x.com/${user?.name}`}
+                />
+                <Switch id="blog-description" defaultChecked />
               </div>
             </CardContent>
             <CardFooter>
@@ -228,5 +285,5 @@ export default function SettingsPage() {
         </TabsContent>
       </Tabs>
     </div>
-  )
+  );
 }

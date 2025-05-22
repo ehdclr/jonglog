@@ -128,11 +128,13 @@ export default function JoinRequestsPage() {
         }
       );
 
-      const { data } = response.data;
-      if (!data.success) {
+      
+      const { success, message } = response.data;
+
+      if (!success) {
         toast({
           title: "승인 실패",
-          description: data.message,
+          description: message,
           variant: "destructive",
         });
       }
@@ -190,11 +192,11 @@ export default function JoinRequestsPage() {
         }
       );
 
-      const { data } = response.data;
-      if (!data.success) {
+      const { success, message } = response.data;
+      if (!success) {
         toast({
           title: "거절 실패",
-          description: data.message,
+          description: message,
           variant: "destructive",
         });
       }

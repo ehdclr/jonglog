@@ -7,6 +7,9 @@ export interface User {
   name: string
   role: UserRole
   avatarUrl?: string
+  bio?: string
+  createdAt?: Date
+  updatedAt?: Date
 }
 
 export interface LoginResponse {
