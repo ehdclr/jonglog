@@ -11,9 +11,9 @@ export async function POST(request: NextRequest) {
       },
       body: JSON.stringify({
         query: `
-      query {
-        blogSettings {
-          id
+      query getBlogSettings{
+        getBlogSettings {
+          blogSettings{
           blogName
           blogDescription
           logoUrl
@@ -22,19 +22,20 @@ export async function POST(request: NextRequest) {
           snsUrl
           isGithubPublic
           isEmailPublic
-          isSnsPublic
-        }
+          }
         success
         message
+      }
       }
         `,
       }),
     })
 
     const { data, errors } = await response.json()
-    const res = data.requestSignUp;
+    const res = data.getBlogSettings;
     if(!res.success) {
       throw new Error(res.message)
+
     }
 
     return NextResponse.json(res)
