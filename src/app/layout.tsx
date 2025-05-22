@@ -7,6 +7,7 @@ import { Header } from "@/components/header";
 import { Sidebar } from "@/components/sidebar";
 import { AuthInitializer } from "@/app/providers";
 import { Toaster } from "@/components/ui/toaster";
+import { useUIStore } from "@/store/ui-store";
 
 const notoSansKR = Noto_Sans_KR({
   subsets: ["latin"],
@@ -28,6 +29,7 @@ export default function RootLayout({
 }: {
   children: React.ReactNode;
 }) {
+
   return (
     <html
       lang="ko"

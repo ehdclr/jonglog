@@ -18,9 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
 import {
   User,
-  Mail,
   Shield,
-  UserPlus,
   Trash,
   MoreHorizontal,
   Upload,
@@ -37,12 +35,13 @@ import { useEffect } from "react";
 import { User as UserType } from "@/types/auth";
 import { api } from "@/utils/api";
 import { debounce } from "lodash";
-
+import { useUIStore } from "@/store/ui-store";
 export default function SettingsPage() {
   const [userList, setUserList] = useState([]);
   const [searchQuery, setSearchQuery] = useState("");
   const { user, accessToken } = useAuthStore();
   const [allUsers, setAllUsers] = useState([]);
+  const {blogSettings} = useUIStore();
 
   useEffect(() => {
     const fetchUserList = async () => {
@@ -243,14 +242,14 @@ export default function SettingsPage() {
             <CardContent className="space-y-4">
               <div className="grid gap-2">
                 <Label htmlFor="blog-name">블로그 이름</Label>
-                <Input id="blog-name" defaultValue="내 개인 블로그" />
+                <Input id="blog-name" defaultValue={blogSettings?.blogName} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-description">블로그 설명</Label>
                 <Input
                   id="blog-description"
-                  defaultValue="개인 기록과 생각을 공유하는 공간입니다."
+                  defaultValue={blogSettings?.blogDescription}
                 />
               </div>
 
@@ -258,24 +257,24 @@ export default function SettingsPage() {
                 <Label htmlFor="blog-url">깃허브 주소 공개</Label>
                 <Input
                   id="blog-url"
-                  defaultValue={`https://github.com/${user?.name}`}
+                  defaultValue={blogSettings?.githubUrl}
                 />
-                <Switch id="blog-description" defaultChecked />
+                <Switch id="blog-description" defaultChecked={blogSettings?.isGithubPublic} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-url">이메일 주소 공개</Label>
-                <Input id="blog-url" defaultValue={`${user?.email}`} />
-                <Switch id="blog-description" defaultChecked />
+                <Input id="blog-url" defaultValue={blogSettings?.contactEmail} />
+                <Switch id="blog-description" defaultChecked={blogSettings?.isEmailPublic} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-url">SNS 주소 공개</Label>
                 <Input
                   id="blog-url"
-                  defaultValue={`https://x.com/${user?.name}`}
+                  defaultValue={blogSettings?.snsUrl}
                 />
-                <Switch id="blog-description" defaultChecked />
+                <Switch id="blog-description" defaultChecked={blogSettings?.isSnsPublic} />
               </div>
             </CardContent>
             <CardFooter>

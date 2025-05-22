@@ -36,7 +36,6 @@ export async function POST(request: NextRequest) {
     });
 
     const { data, errors } = await response.json();
-    console.log("data", data);
     const res = data.getAllUsers;
     if (!res.success) {
       throw new Error(res.message);
