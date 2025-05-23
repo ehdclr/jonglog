@@ -6,23 +6,33 @@ import { useUIStore } from "@/store/ui-store";
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { user, accessToken, setUser } = useAuthStore();
   const { setBlogSettings } = useUIStore();
- 
 
   useEffect(() => {
-    if (accessToken && !user) {
-      fetch("/api/auth/me", {
-        method: "POST",
-        headers: { Authorization: `Bearer ${accessToken}` },
-      })
-        .then((res) => res.json())
-        .then((data) => {
-          if (data.user) setUser(data.user);
-        });
-    }
+    const initializeAuth = async () => {
+      // 예: localStorage에 토큰이 있으면 서버에서 유저 정보 fetch
+      if (accessToken && !user) {
+        try {
+          const res = await fetch("/api/auth/me", {
+            method: "POST",
+            headers: { Authorization: `Bearer ${accessToken}` },
+          });
+          const data = await res.json();
+          if (data.user) {
+            setUser(data.user);
+          }
+        } catch (error) {
+          console.error("Failed to fetch user:", error);
+        }
+      }
+    };
 
+    initializeAuth();
+  }, [accessToken, user, setUser]);
+
+  useEffect(() => {
     const fetchBlogSettings = async () => {
       try {
-        const response = await fetch("/api/config/blog-settings",{
+        const response = await fetch("/api/config/blog-settings", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -62,8 +72,9 @@ export function AuthInitializer({ children }: { children: React.ReactNode }) {
         });
       }
     };
+
     fetchBlogSettings();
-  }, [accessToken, user, setUser, setBlogSettings]);
+  }, [setBlogSettings]);
 
   return <>{children}</>;
 }
