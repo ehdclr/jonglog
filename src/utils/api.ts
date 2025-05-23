@@ -1,35 +1,18 @@
+// utils/api.ts
 import axios from "axios";
 import { useAuthStore } from "@/store/auth-store";
 
 const api = axios.create({
   baseURL: process.env.NEXT_PUBLIC_API_URL || "",
-  withCredentials: true,
+  withCredentials: true,  // 쿠키 자동 전송
 });
 
-// 요청 인터셉터 - Access Token 추가
+// 요청 인터셉터 - 토큰 체크 및 갱신
 api.interceptors.request.use(
-  (config) => {
+  async (config) => {
     const accessToken = useAuthStore.getState().accessToken;
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error)
-);
-
-// 응답 인터셉터 - 토큰 갱신
-api.interceptors.response.use(
-  (response) => response,
-  async (error) => {
-    const originalRequest = error.config;
-
-    // 401 에러이고 재시도하지 않은 경우
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
-
+    if (!accessToken) {
       try {
-        // refreshToken으로 새 accessToken 발급
         const refreshResponse = await axios.post(
           '/api/graphql',
           {
@@ -49,36 +32,37 @@ api.interceptors.response.use(
             `,
           },
           {
-            withCredentials: true,
             headers: {
               'Content-Type': 'application/json',
             },
+            withCredentials: true,
           }
         );
 
         const { data, errors } = refreshResponse.data;
-
+        console.log("zxczxczxczxcs", data);
         if (errors || !data?.refreshToken?.accessToken) {
-          await useAuthStore.getState().logout();
+          useAuthStore.getState().logout();
           return Promise.reject(new Error("Token refresh failed"));
         }
 
-        // 새 Access Token 저장
-        const newAccessToken = data.refreshToken.accessToken;
-        console.log("newAccessToken", newAccessToken);
-        useAuthStore.getState().setAccessToken(newAccessToken);
+        // 새 Access Token을 Zustand store에 저장
+        useAuthStore.getState().setAccessToken(data.refreshToken.accessToken);
+        config.headers.Authorization = `Bearer ${data.refreshToken.accessToken}`;
 
-        // 원래 요청 재시도
-        originalRequest.headers.Authorization = `Bearer ${newAccessToken}`;
-        return axios(originalRequest);
-      } catch (refreshError) {
-        await useAuthStore.getState().logout();
-        return Promise.reject(refreshError);
+        //그리고 다시 재요청 
+        return api.request(config);
+      } catch (error) {
+        useAuthStore.getState().logout();
+        return Promise.reject(error);
       }
+    } else {
+      config.headers.Authorization = `Bearer ${accessToken}`;
     }
 
-    return Promise.reject(error);
-  }
+    return config;
+  },
+  (error) => Promise.reject(error)
 );
 
 export { api };
