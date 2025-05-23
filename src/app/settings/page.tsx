@@ -16,13 +16,7 @@ import {
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { Switch } from "@/components/ui/switch";
-import {
-  User,
-  Shield,
-  Trash,
-  MoreHorizontal,
-  Upload,
-} from "lucide-react";
+import { User, Shield, Trash, MoreHorizontal, Upload } from "lucide-react";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -41,7 +35,17 @@ export default function SettingsPage() {
   const [searchQuery, setSearchQuery] = useState("");
   const { user, accessToken } = useAuthStore();
   const [allUsers, setAllUsers] = useState([]);
-  const {blogSettings} = useUIStore();
+  const [blogSettings, setBlogSettings] = useState({
+    blogName: '',
+    blogDescription: '',
+    githubUrl: '',
+    contactEmail: '',
+    snsUrl: '',
+    isGithubPublic: false,
+    isEmailPublic: false,
+    isSnsPublic: false,
+  });
+
 
   useEffect(() => {
     const fetchUserList = async () => {
@@ -55,18 +59,38 @@ export default function SettingsPage() {
       setUserList(data.users);
       setAllUsers(data.users); // 전체 목록 저장
     };
+    if (useUIStore.getState().blogSettings) {
+      setBlogSettings(useUIStore.getState().blogSettings);
+    }
     fetchUserList();
   }, []);
 
   const filteredUsers = useMemo(() => {
     if (!searchQuery.trim()) return allUsers;
-    
+
     return allUsers.filter(
       (user: UserType) =>
-        user.name.includes(searchQuery) || 
-        user.email.includes(searchQuery)
+        user.name.includes(searchQuery) || user.email.includes(searchQuery)
     );
   }, [allUsers, searchQuery]);
+
+  const updateBlogSettings = async () => {
+    const response = await api.post("/api/admin/updateBlogSettings", {
+      headers: {
+        Authorization: `${accessToken}`,
+      },
+      withCredentials: true,
+      body: {
+        blogName: blogSettings?.blogName,
+        blogDescription: blogSettings?.blogDescription,
+        isGithubPublic: blogSettings?.isGithubPublic,
+        isEmailPublic: blogSettings?.isEmailPublic,
+        isSnsPublic: blogSettings?.isSnsPublic,
+      },
+    });
+    const data = await response.data;
+    console.log(data);
+  };
 
   const debouncedSearch = useCallback(
     debounce((query: string) => {
@@ -255,30 +279,36 @@ export default function SettingsPage() {
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-url">깃허브 주소 공개</Label>
-                <Input
-                  id="blog-url"
-                  defaultValue={blogSettings?.githubUrl}
+                <Input id="blog-url" defaultValue={blogSettings?.githubUrl} />
+                <Switch
+                  id="blog-description"
+                  defaultChecked={blogSettings?.isGithubPublic}
                 />
-                <Switch id="blog-description" defaultChecked={blogSettings?.isGithubPublic} />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-url">이메일 주소 공개</Label>
-                <Input id="blog-url" defaultValue={blogSettings?.contactEmail} />
-                <Switch id="blog-description" defaultChecked={blogSettings?.isEmailPublic} />
+                <Input
+                  id="blog-url"
+                  defaultValue={blogSettings?.contactEmail}
+                />
+                <Switch
+                  id="blog-description"
+                  defaultChecked={blogSettings?.isEmailPublic}
+                />
               </div>
 
               <div className="grid gap-2">
                 <Label htmlFor="blog-url">SNS 주소 공개</Label>
-                <Input
-                  id="blog-url"
-                  defaultValue={blogSettings?.snsUrl}
+                <Input id="blog-url" defaultValue={blogSettings?.snsUrl} />
+                <Switch
+                  id="blog-description"
+                  defaultChecked={blogSettings?.isSnsPublic}
                 />
-                <Switch id="blog-description" defaultChecked={blogSettings?.isSnsPublic} />
               </div>
             </CardContent>
             <CardFooter>
-              <Button>저장</Button>
+              <Button onClick={updateBlogSettings}>저장</Button>
             </CardFooter>
           </Card>
         </TabsContent>
