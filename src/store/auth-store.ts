@@ -2,7 +2,7 @@
 import { create } from 'zustand'
 import { persist, createJSONStorage } from 'zustand/middleware'
 import { User } from '@/types/auth'
-import { api } from '@/utils/api'
+
 
 interface AuthState {
   user: User | null

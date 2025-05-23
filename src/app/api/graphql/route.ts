@@ -11,8 +11,7 @@ export async function POST(request: NextRequest) {
 
  // 쿠키에서 refresh token 가져오기
   const cookieStore = cookies();
-  const refreshToken = cookieStore.get("refresh_token")?.value;
-
+  const refreshToken = cookieStore.get("refreshToken")?.value;
   // 요청 헤더에서 authorization 토큰 가져오기
   const authorization = request.headers.get("authorization");
 
@@ -22,7 +21,7 @@ export async function POST(request: NextRequest) {
       headers: {
         "Content-Type": "application/json",
         ...(authorization ? { Authorization: authorization } : {}),
-        ...(refreshToken ? { Cookie: `refresh_token=${refreshToken}` } : {}),
+        ...(refreshToken ? { Cookie: `refreshToken=${refreshToken}` } : {}),
       },
       body: JSON.stringify(body),
     });

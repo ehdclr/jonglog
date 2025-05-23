@@ -24,6 +24,7 @@ api.interceptors.request.use(
                     id
                     email
                     role
+                    name
                   }
                   success
                   message
@@ -40,7 +41,6 @@ api.interceptors.request.use(
         );
 
         const { data, errors } = refreshResponse.data;
-        console.log("zxczxczxczxcs", data);
         if (errors || !data?.refreshToken?.accessToken) {
           useAuthStore.getState().logout();
           return Promise.reject(new Error("Token refresh failed"));
@@ -48,10 +48,9 @@ api.interceptors.request.use(
 
         // 새 Access Token을 Zustand store에 저장
         useAuthStore.getState().setAccessToken(data.refreshToken.accessToken);
+        useAuthStore.getState().setUser(data.refreshToken.user);
         config.headers.Authorization = `Bearer ${data.refreshToken.accessToken}`;
-
-        //그리고 다시 재요청 
-        return api.request(config);
+        config.withCredentials = true;
       } catch (error) {
         useAuthStore.getState().logout();
         return Promise.reject(error);
