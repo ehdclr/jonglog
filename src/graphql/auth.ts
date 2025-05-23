@@ -1,4 +1,4 @@
-import { gql } from "@apollo/client"
+import { gql } from "@apollo/client";
 
 export const LOGIN_MUTATION = gql`
   mutation Login($loginInput: LoginInput!) {
@@ -8,29 +8,43 @@ export const LOGIN_MUTATION = gql`
         email
         name
         role
-        avatarUrl
-        bio
       }
       accessToken
       success
       message
     }
   }
-`
+`;
+
+export const REFRESH_TOKEN_MUTATION = gql`
+  mutation RefreshToken {
+    refreshToken {
+      accessToken
+    }
+  }
+`;
 
 export const LOGOUT_MUTATION = gql`
   mutation Logout {
-    logout
-  }
-`
-
-export const GET_CURRENT_USER = gql`
-  query GetCurrentUser {
-    getCurrentUser {
-      id
-      email
-      name
-      role
+    logout {
+      success
+      message
     }
   }
-`
+`;
+
+export const GET_CURRENT_USER = gql`
+  query {
+    getCurrentUser {
+      success
+      message
+      user {
+        id
+        email
+        name
+        role
+        avatarUrl
+      }
+    }
+  }
+`;

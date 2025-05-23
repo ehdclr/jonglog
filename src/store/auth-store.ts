@@ -74,7 +74,8 @@ export const useAuthStore = create<AuthState>()(
             headers: {
               'Content-Type': 'application/json',
               'Authorization': `Bearer ${get().accessToken}`
-            }
+            },
+            credentials: 'include'
           })
         } catch (error) {
           console.error("로그아웃 오류:", error)

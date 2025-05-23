@@ -6,8 +6,9 @@ import { useUIStore } from "@/store/ui-store";
 export function AuthInitializer({ children }: { children: React.ReactNode }) {
   const { user, accessToken, setUser } = useAuthStore();
   const { setBlogSettings } = useUIStore();
+ 
+
   useEffect(() => {
-    // 예: localStorage에 토큰이 있으면 서버에서 유저 정보 fetch
     if (accessToken && !user) {
       fetch("/api/auth/me", {
         method: "POST",

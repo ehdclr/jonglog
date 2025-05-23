@@ -41,7 +41,6 @@ export async function POST(request: NextRequest) {
     // 응답에서 쿠키 제거 지시가 있으면 클라이언트 쿠키도 제거
     const nextResponse = NextResponse.json(res);
     nextResponse.cookies.delete("refreshToken");
-    console.log('nextResponse', nextResponse)
 
     return nextResponse;
   } catch (error: any) {

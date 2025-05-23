@@ -65,12 +65,16 @@ export default function JoinRequestsPage() {
   // 데이터 로딩 시뮬레이션
   useEffect(() => {
     const fetchRequests = async () => {
-      const response = await api.post("/api/admin/join/list", {
-        withCredentials: true,
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      });
+      const response = await api.post(
+        "/api/admin/join/list",
+        {}, // 빈 데이터 객체
+        {
+          withCredentials: true,
+          headers: {
+            Authorization: `Bearer ${accessToken}`,
+          },
+        }
+      );
       const data = response.data;
       if (data.success) {
         setRequests(data.signUpRequests);
@@ -128,7 +132,6 @@ export default function JoinRequestsPage() {
         }
       );
 
-      
       const { success, message } = response.data;
 
       if (!success) {
